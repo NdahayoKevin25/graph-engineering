@@ -1,37 +1,190 @@
 {
   "$schema": "../../artifacts/test.schema.json",
   "artifactType": "test.schema",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "metadata": {
     "generatedBy": "ai.testing-agent",
     "generatedAt": "2026-02-03T09:20:00Z",
     "projectName": "multi-tenant-saas",
-    "sourceArtifacts": ["architecture.json"]
+    "sourceArtifacts": [
+      "architecture.json"
+    ]
   },
   "data": {
     "framework": "vitest",
     "suites": [
-      { "nodeId": "project.node-express", "kind": "api", "file": "tests/health-check.test.ts", "status": "passing" },
-      { "nodeId": "backend.error-handler", "kind": "unit", "file": "tests/errorHandler.test.ts", "status": "passing" },
-      { "nodeId": "backend.api-response", "kind": "unit", "file": "tests/apiResponse.test.ts", "status": "passing" },
-      { "nodeId": "backend.pagination", "kind": "unit", "file": "tests/pagination.test.ts", "status": "passing" },
-      { "nodeId": "backend.middleware", "kind": "unit", "file": "tests/asyncHandler.test.ts", "status": "passing" },
-      { "nodeId": "backend.validation", "kind": "unit", "file": "tests/validationMiddleware.test.ts", "status": "passing" },
-      { "nodeId": "authentication.jwt", "kind": "unit", "file": "tests/authMiddleware.test.ts", "status": "passing" },
-      { "nodeId": "authentication.password", "kind": "api", "file": "tests/authentication.test.ts", "status": "passing" },
-      { "nodeId": "authorization.rbac", "kind": "unit", "file": "tests/rbacMiddleware.test.ts", "status": "passing" },
-      { "nodeId": "authorization.tenant-isolation", "kind": "unit", "file": "tests/tenantMiddleware.test.ts", "status": "passing" },
-      { "nodeId": "storage.aws-s3", "kind": "unit", "file": "tests/s3-client.test.ts", "status": "passing" },
-      { "nodeId": "storage.upload", "kind": "unit", "file": "tests/upload.test.ts", "status": "passing" },
-      { "nodeId": "storage.file-validation", "kind": "unit", "file": "tests/fileValidation.test.ts", "status": "passing" },
-      { "nodeId": "storage.presigned-url", "kind": "unit", "file": "tests/presignedUrl.test.ts", "status": "passing" },
-      { "nodeId": "backend.repository", "kind": "unit", "file": "tests/ProjectRepository.test.ts", "status": "passing" },
-      { "nodeId": "backend.service", "kind": "unit", "file": "tests/ProjectService.test.ts", "status": "passing" },
-      { "nodeId": "backend.controller", "kind": "api", "file": "tests/ProjectController.test.ts", "status": "passing" },
-      { "nodeId": "backend.express", "kind": "api", "file": "tests/ProjectRoutes.test.ts", "status": "passing" },
-      { "nodeId": "api.crud", "kind": "integration", "file": "tests/ProjectCrudFiltering.test.ts", "status": "passing" },
-      { "nodeId": "testing.integration", "kind": "integration", "file": "tests/testDatabase.test.ts", "status": "passing" }
+      {
+        "nodeId": "project.node-express",
+        "kind": "api",
+        "file": "tests/health-check.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "backend.error-handler",
+        "kind": "unit",
+        "file": "tests/errorHandler.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "backend.api-response",
+        "kind": "unit",
+        "file": "tests/apiResponse.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "backend.pagination",
+        "kind": "unit",
+        "file": "tests/pagination.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "backend.middleware",
+        "kind": "unit",
+        "file": "tests/asyncHandler.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "backend.validation",
+        "kind": "unit",
+        "file": "tests/validationMiddleware.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "authentication.jwt",
+        "kind": "unit",
+        "file": "tests/authMiddleware.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "authentication.password",
+        "kind": "api",
+        "file": "tests/authentication.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "authorization.rbac",
+        "kind": "unit",
+        "file": "tests/rbacMiddleware.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "authorization.tenant-isolation",
+        "kind": "unit",
+        "file": "tests/tenantMiddleware.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "storage.aws-s3",
+        "kind": "unit",
+        "file": "tests/s3-client.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "storage.upload",
+        "kind": "unit",
+        "file": "tests/upload.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "storage.file-validation",
+        "kind": "unit",
+        "file": "tests/fileValidation.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "storage.presigned-url",
+        "kind": "unit",
+        "file": "tests/presignedUrl.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "backend.repository",
+        "kind": "unit",
+        "file": "tests/ProjectRepository.test.ts",
+        "status": "passing",
+        "instanceId": "backend.repository:Project"
+      },
+      {
+        "nodeId": "backend.service",
+        "kind": "unit",
+        "file": "tests/ProjectService.test.ts",
+        "status": "passing",
+        "instanceId": "backend.service:Project"
+      },
+      {
+        "nodeId": "backend.controller",
+        "kind": "api",
+        "file": "tests/ProjectController.test.ts",
+        "status": "passing",
+        "instanceId": "backend.controller:Project"
+      },
+      {
+        "nodeId": "backend.express",
+        "kind": "api",
+        "file": "tests/ProjectRoutes.test.ts",
+        "status": "passing",
+        "instanceId": "backend.express:Project"
+      },
+      {
+        "nodeId": "api.crud",
+        "kind": "integration",
+        "file": "tests/ProjectCrudFiltering.test.ts",
+        "status": "passing",
+        "instanceId": "api.crud:Project"
+      },
+      {
+        "nodeId": "testing.integration",
+        "kind": "integration",
+        "file": "tests/testDatabase.test.ts",
+        "status": "passing"
+      },
+      {
+        "nodeId": "backend.repository",
+        "kind": "unit",
+        "file": "tests/InvoiceRepository.test.ts",
+        "status": "not-run",
+        "instanceId": "backend.repository:Invoice"
+      },
+      {
+        "nodeId": "backend.service",
+        "kind": "unit",
+        "file": "tests/InvoiceService.test.ts",
+        "status": "not-run",
+        "instanceId": "backend.service:Invoice"
+      },
+      {
+        "nodeId": "backend.controller",
+        "kind": "api",
+        "file": "tests/InvoiceController.test.ts",
+        "status": "not-run",
+        "instanceId": "backend.controller:Invoice"
+      },
+      {
+        "nodeId": "backend.express",
+        "kind": "api",
+        "file": "tests/InvoiceRoutes.test.ts",
+        "status": "not-run",
+        "instanceId": "backend.express:Invoice"
+      },
+      {
+        "nodeId": "api.crud",
+        "kind": "integration",
+        "file": "tests/InvoiceCrudFiltering.test.ts",
+        "status": "not-run",
+        "instanceId": "api.crud:Invoice"
+      }
     ],
-    "coverageGaps": ["database.neon-postgres.connection", "database.migrations", "database.transactions", "devops.docker", "devops.github-actions", "documentation.setup", "documentation.api", "documentation.architecture", "testing.unit", "testing.api"]
+    "coverageGaps": [
+      "database.neon-postgres.connection",
+      "database.migrations",
+      "database.transactions",
+      "devops.docker",
+      "devops.github-actions",
+      "documentation.setup",
+      "documentation.api",
+      "documentation.architecture",
+      "testing.unit",
+      "testing.api"
+    ]
   }
 }

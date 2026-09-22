@@ -1,0 +1,31 @@
+{
+  "name": "graph-engineering-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "create-graph-app",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24 <27"
+  },
+  "scripts": {
+    "build": "npm run build -w create-graph-app && npm run build -w @graph-engineering/contracts && npm run build -w @graph-engineering/engine && npm run build -w @graph-engineering/dashboard",
+    "build:dependencies": "npm run build -w create-graph-app && npm run build -w @graph-engineering/contracts",
+    "typecheck": "npm run build:dependencies && npm run typecheck --workspaces --if-present",
+    "test": "npm run build:dependencies && npm run test --workspaces --if-present",
+    "check": "npm run typecheck && npm run test && npm run build",
+    "graph": "node packages/engine/dist/cli.js",
+    "dev": "npm run dev -w @graph-engineering/dashboard",
+    "setup:git": "node scripts/setup-git.mjs",
+    "format": "prettier --write packages scripts evaluation .github .graph/project.json package.json tsconfig.base.json README.md CONTRIBUTING.md docs",
+    "format:check": "prettier --check packages scripts evaluation .github .graph/project.json package.json tsconfig.base.json README.md CONTRIBUTING.md docs"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "prettier": "^3.6.2"
+  }
+}

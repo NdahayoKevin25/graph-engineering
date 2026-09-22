@@ -15,6 +15,8 @@ database.neon-postgres.connection
 
 Plus `name` (human-readable), `version` (semver — see `TEMPLATE-SPEC.md` §Versioning), `category`/`subcategory`, and `status` (`implemented` | `planned` | `experimental`).
 
+The registry `id` identifies a reusable template, not an execution. Architecture artifacts at version `2.0.0` assign each invocation a unique `instanceId` (for example `api.crud:Project` and `api.crud:Invoice`, both with `id: api.crud`). Singleton invocations conventionally use their template ID as `instanceId`. Edges, manifests, and execution state key on invocation identity; registry lookup and template compatibility continue to use `id`. When a prerequisite template is instantiated more than once, `bindings` maps its template ID to the chosen upstream instance ID. See `ARTIFACT-SPEC.md` §7.
+
 ## 2. Inputs
 
 The typed, named values a node needs to configure its output. Inputs come from three places, in priority order: (1) explicit values an agent passes when invoking the node, (2) values read from an **artifact** the node consumes (§6), (3) the input's declared `default`. A required input with no value from any of the three sources is a hard error — the node must not guess.

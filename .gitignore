@@ -5,3 +5,13 @@ dist/
 *.log
 .DS_Store
 *.tgz
+.graph/local/
+.graph/workspaces/
+.graph/cache/
+coverage/
+test-results/
+.playwright/
+playwright-report/
+__pycache__/
+*.py[cod]
+.venv/

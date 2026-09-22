@@ -37,7 +37,7 @@ Every artifact file is a single JSON object with this envelope, wrapping content
 |---|---|---|
 | `requirements.schema.json` | `ai/requirements-agent` | `ai/architect-agent` |
 | `architecture.schema.json` | `ai/architect-agent` | every downstream agent |
-| `database.schema.schema.json` | `ai/database-agent` | `ai/backend-agent`, `ai/testing-agent` |
+| `database.schema.json` | `ai/database-agent` | `ai/backend-agent`, `ai/testing-agent` |
 | `api.schema.json` | `ai/api-agent` (or `ai/backend-agent`) | `ai/frontend-agent`, `ai/testing-agent`, `ai/documentation-agent` |
 | `auth.schema.json` | `ai/authentication-agent` | `ai/backend-agent`, `ai/frontend-agent` |
 | `storage.schema.json` | `ai/storage-agent` | `ai/backend-agent`, `ai/frontend-agent` |
@@ -46,7 +46,7 @@ Every artifact file is a single JSON object with this envelope, wrapping content
 | `test.schema.json` | `ai/testing-agent` | `ai/validation-agent` |
 | `deployment.schema.json` | `ai/devops-agent` | `ai/validation-agent` |
 
-(Filenames on disk under `artifacts/` drop the `artifactType`'s dotted prefix ambiguity by using `-` — see the actual files in this directory, e.g. `database.schema.json` is itself a JSON Schema *for* the `database.schema` artifact type. This mirrors how `TEMPLATE-REGISTRY.md` §3 in the brief names them.)
+These are schema filenames. Project artifacts conventionally use `database.json`, `architecture.json`, and so on. Canonical types are `requirements`, `architecture`, and `<name>.schema` for the remaining rows. The validator's import boundary accepts documented filename aliases (`architecture.schema.json`, `database.schema.json`, and the old typo `database.schema.schema.json`) without changing canonical exports. Unknown names are not guessed, and duplicate files for one artifact type are rejected.
 
 ## 4. Relationship to graph nodes
 
@@ -55,13 +55,25 @@ A node's `template.yaml` `consumes`/`produces` (see `GRAPH-NODE-SPEC.md` §6) na
 ## 5. Validation rules common to all artifacts
 
 - `data` must validate against the schema's JSON Schema `data` definition — `additionalProperties: false` at every object level unless explicitly marked extensible, so typos and drift are caught immediately rather than silently ignored downstream.
-- Every entity referenced by `$ref`-like string IDs (e.g. an `api.schema.json` route referencing a `database.schema.json` table name) must resolve — the graph validator (`tools/validate-graph`) checks this cross-artifact, since JSON Schema alone can't.
+- Every entity referenced by `$ref`-like string IDs (e.g. an API route referencing a database table name) must resolve. JSON Schema validation alone does not establish these cross-artifact relationships; the validator currently checks graph, manifest, and test invocation references, not arbitrary application-domain references.
 - Timestamps are ISO-8601 UTC.
 
 ## 6. Schema evolution
 
-Each schema file carries its own `$id` version suffix implicitly via the artifact instance's `version` field (§2) — the *schema* itself is versioned the same way templates are (`TEMPLATE-SPEC.md` §7): additive fields are MINOR, required-field/type/removal changes are MAJOR and require a note in this file's changelog section (not yet needed — all schemas are at `1.0.0`).
+The artifact's `version` identifies its contract version independently from the stable schema filename. Additive fields are MINOR; required-field/type/removal changes are MAJOR. Architecture v2 requires invocation identity. Test artifacts v1.1 add an optional `instanceId` to each suite; repeated templates require it to resolve coverage unambiguously. The architecture schema accepts v1 singleton documents for migration and v2 documents for current execution; unknown major versions are rejected.
 
-## 7. Known limitation: no multi-instance node identity
+## 7. Invocation identity and migration
 
-`architecture.schema.json`'s `data.nodes[]` identifies each entry solely by its template `id` — there is no way to represent the same node invoked twice with different `inputs` (e.g. `api.crud` run once for a `Product` entity and again for an `Order` entity in the same project). `examples/multi-tenant-saas/README.md` hits this directly: its `requirements.json` asks for CRUD on two entities, but its `architecture.json` can only list `api.crud` (and the four `backend.*` nodes it composes) once. Two entries sharing one `id` would collide in every `Set`/`Map` keyed by id across `tools/validate-graph` and the registry, so this isn't a documentation gap — it's a real ceiling on how many entity-scoped node invocations one `architecture.json` can record today. The fix, not yet implemented: add an `instanceId` field to `data.nodes[]` (defaulting to `id` for naturally-singleton nodes), and update `tools/validate-graph`'s dependency/orphan/cycle checks to key on `instanceId` instead of `id`. Artifact types that are naturally array-of-records (e.g. `database.schema.json`'s `tables[]`) don't hit this — it's specific to the graph-orchestration layer.
+Version `2.0.0` architecture nodes carry both `id` (registry template) and `instanceId` (unique invocation). For example:
+
+```json
+{ "id": "backend.service", "instanceId": "backend.service:Invoice", "order": 20,
+  "inputs": { "entityName": "Invoice" },
+  "bindings": { "backend.repository": "backend.repository:Invoice" } }
+```
+
+Bindings select an upstream instance by its template ID. Omit a binding only when exactly one invocation of that prerequisite exists. Bindings must point to the declared template. Selected `extends` prerequisites obey the same resolution and ordering rules. Explicit edges use `from` = dependent instance and `to` = prerequisite instance; both implicit and explicit edges participate in cycle and order checks. Conflicts still operate on template IDs.
+
+The exported `normalizeArchitecture()` boundary returns a copy of a v1 singleton plan with `version: 2.0.0` and `instanceId = id`. It preserves input payloads and metadata. Duplicate legacy IDs cannot be migrated without explicit user intent and are rejected. No document is rewritten during validation. `normalizeManifest()` similarly preserves legacy singleton ledgers while adding `schemaVersion: 2.0.0` and `templateId` per entry; v2 ledger keys are invocation IDs. Test suites identify the template with `nodeId` and repeated invocations with `instanceId`.
+
+The SaaS example now records separate `Project` and `Invoice` CRUD chains. The registry remains a template catalog, not an invocation ledger.

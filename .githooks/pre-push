@@ -1,0 +1,10 @@
+#!/bin/sh
+# Protect the integration workflow locally. Install with npm run setup:git.
+while read -r local_ref local_oid remote_ref remote_oid; do
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/master)
+      echo 'Graph Engineering: direct pushes to main/master are prohibited. Use a feature branch and a PR to dev.' >&2
+      exit 1
+      ;;
+  esac
+done

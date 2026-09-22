@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "projectId": "b92d8cb4-ea9d-4fc7-b7b8-7a116a8b6d65",
+  "name": "Graph Engineering",
+  "policy": {
+    "version": "1.0.0",
+    "inference": "local",
+    "providers": [],
+    "network": "deny",
+    "allowedHosts": [],
+    "exportPaths": [],
+    "excludedPaths": [
+      ".env",
+      ".env.*",
+      "*.pem",
+      "*.key",
+      "**/credentials*",
+      "**/secrets*"
+    ],
+    "publication": "none",
+    "maxWorkers": 2,
+    "maxAttempts": 3,
+    "maxContextTokens": 16000,
+    "maxOutputTokens": 4000,
+    "maxTurns": 12,
+    "timeoutSeconds": 600,
+    "maxCostUsd": null,
+    "decisionMode": "shadow",
+    "promotedCategories": []
+  },
+  "verification": [],
+  "github": {
+    "repository": "NdahayoKevin25/graph-engineering",
+    "baseBranch": "dev",
+    "remote": "origin"
+  }
+}

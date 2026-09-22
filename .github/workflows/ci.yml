@@ -1,0 +1,73 @@
+name: Platform checks
+
+on:
+  pull_request:
+    branches: [dev]
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run check
+      - run: npm ci --prefix graph-templates/tools/validate-graph
+      - run: npm test --prefix graph-templates/tools/validate-graph
+      - run: npm run pack:check -w create-graph-app
+      - name: Docker execution integration
+        if: runner.os == 'Linux' && runner.arch == 'X64'
+        run: |
+          docker pull node:24-alpine
+          npm test -w @graph-engineering/engine -- --run tests/execution.test.ts
+        env:
+          GRAPH_ENGINE_DOCKER_TESTS: "1"
+      - name: Evaluation fixture self-checks
+        if: runner.os == 'Linux' && runner.arch == 'X64'
+        run: node --test evaluation/runner.test.mjs
+      - name: Browser integration
+        if: runner.os == 'Linux' && runner.arch == 'X64'
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e:fixture -w @graph-engineering/dashboard
+
+  generated-apps:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w create-graph-app
+      - run: node create-graph-app/scripts/smoke-generated-apps.js
+
+  sidecar:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s sidecars/laya -p 'test_*.py' -v

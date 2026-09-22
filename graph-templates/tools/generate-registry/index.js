@@ -79,6 +79,7 @@ function main() {
       outputs: ((doc.outputs || [])).map((o) => o.name),
       dependsOn: ((doc.dependencies || {}).templates) || [],
       environment: ((doc.environment || {}).variables) || [],
+      testing: doc.testing || { strategy: 'none' },
       compatibleNodes: [...compatibleNodes],
       path: path.relative(ROOT, path.dirname(file)),
     });

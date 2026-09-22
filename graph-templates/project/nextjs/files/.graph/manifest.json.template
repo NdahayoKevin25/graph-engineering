@@ -1,7 +1,9 @@
 {
+  "schemaVersion": "2.0.0",
   "projectName": "{{input.projectName}}",
   "nodes": {
     "project.nextjs": {
+      "templateId": "project.nextjs",
       "version": "1.0.0",
       "generatedAt": "{{now}}",
       "files": ["package.json", "tsconfig.json", "next.config.ts", ".env.example", ".gitignore", "vitest.config.ts", "vitest.setup.ts", "app/layout.tsx", "app/page.tsx", "app/globals.css", "lib/env.ts"]

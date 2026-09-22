@@ -1,6 +1,6 @@
 {
   "$schema": "template-registry.schema.json",
-  "generatedAt": "2026-09-17T21:08:07.249Z",
+  "generatedAt": "2026-09-22T02:02:13.944Z",
   "templateCount": 55,
   "templates": [
     {
@@ -56,6 +56,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "api",
+        "location": "tests/{{input.entityName}}CrudFiltering.test.ts",
+        "command": "npm test -- CrudFiltering"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.error-handler",
@@ -94,6 +99,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "n/a",
+        "command": "n/a"
+      },
       "compatibleNodes": [
         "api.crud"
       ],
@@ -125,6 +135,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "n/a",
+        "command": "n/a"
+      },
       "compatibleNodes": [
         "backend.pagination",
         "api.crud"
@@ -157,6 +172,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "n/a",
+        "command": "n/a"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection"
       ],
@@ -184,6 +204,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "n/a",
+        "command": "n/a"
+      },
       "compatibleNodes": [
         "api.crud"
       ],
@@ -212,6 +237,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "n/a",
+        "command": "n/a"
+      },
       "compatibleNodes": [
         "project.node-express"
       ],
@@ -270,6 +300,11 @@
           ]
         }
       ],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/authMiddleware.test.ts",
+        "command": "npm test -- authMiddleware"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.error-handler",
@@ -306,6 +341,9 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "none"
+      },
       "compatibleNodes": [
         "authentication.jwt"
       ],
@@ -371,6 +409,11 @@
           ]
         }
       ],
+      "testing": {
+        "strategy": "api",
+        "location": "tests/authentication.test.ts",
+        "command": "npm test -- authentication"
+      },
       "compatibleNodes": [
         "authentication.jwt",
         "database.neon-postgres.connection",
@@ -401,6 +444,9 @@
       "outputs": [],
       "dependsOn": [],
       "environment": [],
+      "testing": {
+        "strategy": "none"
+      },
       "compatibleNodes": [
         "project.node-express",
         "authorization.rbac"
@@ -433,6 +479,9 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "none"
+      },
       "compatibleNodes": [
         "authentication.jwt",
         "authorization.rbac"
@@ -470,6 +519,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/rbacMiddleware.test.ts",
+        "command": "npm test -- rbacMiddleware"
+      },
       "compatibleNodes": [
         "authentication.jwt",
         "backend.error-handler",
@@ -507,6 +561,9 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "none"
+      },
       "compatibleNodes": [
         "authentication.jwt",
         "database.neon-postgres.connection",
@@ -541,6 +598,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/tenantMiddleware.test.ts",
+        "command": "npm test -- tenantMiddleware"
+      },
       "compatibleNodes": [
         "authentication.jwt",
         "backend.repository",
@@ -573,6 +635,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/apiResponse.test.ts",
+        "command": "npm test -- apiResponse"
+      },
       "compatibleNodes": [
         "project.node-express",
         "backend.error-handler",
@@ -621,6 +688,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "api",
+        "location": "tests/{{input.entityName}}Controller.test.ts",
+        "command": "npm test -- {{input.entityName}}Controller"
+      },
       "compatibleNodes": [
         "backend.service",
         "backend.api-response",
@@ -656,6 +728,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/errorHandler.test.ts",
+        "command": "npm test -- errorHandler"
+      },
       "compatibleNodes": [
         "project.node-express",
         "backend.service",
@@ -700,6 +777,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "api",
+        "location": "tests/{{input.entityName}}Routes.test.ts",
+        "command": "npm test -- {{input.entityName}}Routes"
+      },
       "compatibleNodes": [
         "backend.controller",
         "authentication.jwt",
@@ -732,6 +814,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/asyncHandler.test.ts",
+        "command": "npm test -- asyncHandler"
+      },
       "compatibleNodes": [
         "backend.error-handler",
         "backend.controller",
@@ -768,6 +855,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/pagination.test.ts",
+        "command": "npm test -- pagination"
+      },
       "compatibleNodes": [
         "project.node-express",
         "backend.controller",
@@ -813,6 +905,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/{{input.entityName}}Repository.test.ts",
+        "command": "npm test -- {{input.entityName}}Repository"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.error-handler",
@@ -854,6 +951,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/{{input.entityName}}Service.test.ts",
+        "command": "npm test -- {{input.entityName}}Service"
+      },
       "compatibleNodes": [
         "backend.repository",
         "backend.error-handler",
@@ -889,6 +991,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/validationMiddleware.test.ts",
+        "command": "npm test -- validationMiddleware"
+      },
       "compatibleNodes": [
         "backend.error-handler",
         "backend.express",
@@ -923,6 +1030,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "integration",
+        "location": "tests/migrations.test.ts",
+        "command": "npm test -- migrations"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.repository",
@@ -971,6 +1083,11 @@
           ]
         }
       ],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/database-connection.test.ts",
+        "command": "npm test -- database-connection"
+      },
       "compatibleNodes": [
         "project.node-express",
         "backend.repository",
@@ -1009,6 +1126,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "integration",
+        "location": "tests/seed.test.ts",
+        "command": "npm test -- seed"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.repository",
@@ -1043,6 +1165,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/withTransaction.test.ts",
+        "command": "npm test -- withTransaction"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.repository"
@@ -1072,6 +1199,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "devops.docker",
         "devops.github-actions"
@@ -1110,6 +1242,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "devops.docker",
         "devops.github-actions",
@@ -1147,6 +1284,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "project.node-express",
         "database.neon-postgres.connection",
@@ -1175,6 +1317,11 @@
       ],
       "dependsOn": [],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "project.node-express",
         "database.neon-postgres.connection",
@@ -1227,6 +1374,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "project.node-express",
         "devops.docker",
@@ -1256,6 +1408,11 @@
       ],
       "dependsOn": [],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [],
       "path": "documentation/agent-context"
     },
@@ -1285,6 +1442,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "api.crud",
         "backend.express",
@@ -1311,6 +1473,11 @@
       ],
       "dependsOn": [],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "documentation.agent-context"
       ],
@@ -1337,6 +1504,11 @@
       ],
       "dependsOn": [],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "project.node-express"
       ],
@@ -1375,6 +1547,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/AuthContext.test.tsx",
+        "command": "npm test -- AuthContext"
+      },
       "compatibleNodes": [
         "frontend.nextjs",
         "authentication.password",
@@ -1414,6 +1591,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "frontend.authentication",
         "frontend.tables",
@@ -1446,6 +1628,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/useFormState.test.tsx",
+        "command": "npm test -- useFormState"
+      },
       "compatibleNodes": [
         "frontend.nextjs",
         "frontend.authentication",
@@ -1479,6 +1666,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/apiClient.test.ts",
+        "command": "npm test -- apiClient"
+      },
       "compatibleNodes": [
         "project.nextjs",
         "frontend.authentication",
@@ -1505,6 +1697,11 @@
       "outputs": [],
       "dependsOn": [],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "frontend.forms",
         "frontend.tables"
@@ -1539,6 +1736,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/useQueryTable.test.ts",
+        "command": "npm test -- useQueryTable"
+      },
       "compatibleNodes": [
         "frontend.nextjs",
         "frontend.dashboards"
@@ -1590,6 +1792,11 @@
           ]
         }
       ],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/HomePage.test.tsx",
+        "command": "npm test -- HomePage"
+      },
       "compatibleNodes": [
         "frontend.nextjs",
         "frontend.authentication",
@@ -1663,6 +1870,11 @@
           ]
         }
       ],
+      "testing": {
+        "strategy": "integration",
+        "location": "tests/health-check.test.ts",
+        "command": "npm test -- health-check"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "storage.aws-s3",
@@ -1746,6 +1958,11 @@
           ]
         }
       ],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/s3-client.test.ts",
+        "command": "npm test -- s3-client"
+      },
       "compatibleNodes": [
         "project.node-express",
         "storage.upload",
@@ -1785,6 +2002,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/delete.test.ts",
+        "command": "npm test -- delete"
+      },
       "compatibleNodes": [
         "storage.upload",
         "backend.error-handler",
@@ -1823,6 +2045,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/download.test.ts",
+        "command": "npm test -- download"
+      },
       "compatibleNodes": [
         "storage.aws-s3",
         "backend.error-handler",
@@ -1863,6 +2090,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/fileValidation.test.ts",
+        "command": "npm test -- fileValidation"
+      },
       "compatibleNodes": [
         "storage.upload",
         "backend.error-handler",
@@ -1902,6 +2134,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/presignedUrl.test.ts",
+        "command": "npm test -- presignedUrl"
+      },
       "compatibleNodes": [
         "storage.aws-s3",
         "backend.express"
@@ -1941,6 +2178,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/upload.test.ts",
+        "command": "npm test -- upload"
+      },
       "compatibleNodes": [
         "storage.aws-s3",
         "backend.error-handler",
@@ -1977,6 +2219,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "api",
+        "location": "n/a — this node configures the convention other nodes' API tests use",
+        "command": "npm test"
+      },
       "compatibleNodes": [
         "project.node-express",
         "backend.express",
@@ -2013,6 +2260,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/factories.test.ts",
+        "command": "npm test -- factories"
+      },
       "compatibleNodes": [
         "project.node-express",
         "authentication.password",
@@ -2058,6 +2310,11 @@
           ]
         }
       ],
+      "testing": {
+        "strategy": "integration",
+        "location": "tests/testDatabase.test.ts",
+        "command": "npm test -- testDatabase"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.repository",
@@ -2090,6 +2347,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/mockDatabase.test.ts",
+        "command": "npm test -- mockDatabase"
+      },
       "compatibleNodes": [
         "testing.unit",
         "backend.repository",
@@ -2124,6 +2386,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "n/a — this node configures the test runner other nodes' tests use",
+        "command": "npm test"
+      },
       "compatibleNodes": [
         "project.node-express",
         "backend.repository",

@@ -1,0 +1,6 @@
+laya @ https://files.pythonhosted.org/packages/ec/1c/a9903d5c3c51579f45f9656f733c8a2d985b16a3cb7594edf45369d1f995/laya-0.3.5-py3-none-any.whl#sha256=4c57f64cbaf893bb5c7b4affddc2bf21a819f55df51941689f11868583be2903
+torch==2.8.0
+transformers==4.57.6
+safetensors==0.6.2
+huggingface-hub==0.36.2
+numpy==2.2.6

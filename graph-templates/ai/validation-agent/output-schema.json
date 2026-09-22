@@ -15,6 +15,7 @@
       "required": ["rule", "message"],
       "properties": {
         "rule": { "type": "string", "description": "One of the 11 check categories, e.g. missing-dependencies" },
+        "check": { "type": "string", "description": "Deprecated compatibility alias of rule." },
         "nodeId": { "type": "string" },
         "message": { "type": "string" }
       }

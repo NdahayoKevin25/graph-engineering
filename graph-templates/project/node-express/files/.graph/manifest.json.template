@@ -1,7 +1,9 @@
 {
+  "schemaVersion": "2.0.0",
   "projectName": "{{input.projectName}}",
   "nodes": {
     "project.node-express": {
+      "templateId": "project.node-express",
       "version": "1.0.0",
       "generatedAt": "{{now}}",
       "files": ["package.json", "tsconfig.json", ".env.example", ".gitignore", "src/app.ts", "src/utils/helpers.ts"]

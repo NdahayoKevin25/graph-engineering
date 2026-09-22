@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Graph Engineering synthetic evaluation artifact",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "kind",
+    "sourceCodeHash",
+    "startedAt",
+    "finishedAt",
+    "taskCount",
+    "results"
+  ],
+  "properties": {
+    "version": { "const": "1.0.0" },
+    "kind": { "const": "synthetic-engineering-evaluation" },
+    "sourceCodeHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "finishedAt": { "type": "string", "format": "date-time" },
+    "taskCount": { "type": "integer", "minimum": 1, "maximum": 60 },
+    "results": { "type": "array", "items": { "$ref": "#/$defs/task" } }
+  },
+  "$defs": {
+    "nullableAmount": {
+      "anyOf": [{ "type": "number", "minimum": 0 }, { "type": "null" }]
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "category",
+        "provider",
+        "model",
+        "selected",
+        "confidence"
+      ],
+      "properties": {
+        "caseId": { "type": "string", "minLength": 1 },
+        "category": { "type": "string", "minLength": 1 },
+        "provider": { "enum": ["laya", "jev"] },
+        "model": { "type": "string", "minLength": 1 },
+        "selected": { "type": ["string", "null"] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "usage",
+        "decisions",
+        "policyViolation",
+        "configurationHash",
+        "configurationUnchanged",
+        "elapsedMs",
+        "adapterExitCode",
+        "verification"
+      ],
+      "properties": {
+        "usage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["inputTokens", "outputTokens", "costUsd"],
+          "properties": {
+            "inputTokens": { "$ref": "#/$defs/nullableAmount" },
+            "outputTokens": { "$ref": "#/$defs/nullableAmount" },
+            "costUsd": { "$ref": "#/$defs/nullableAmount" }
+          }
+        },
+        "decisions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/decision" }
+        },
+        "policyViolation": { "type": "boolean" },
+        "elapsedMs": { "type": "number", "minimum": 0 },
+        "configurationHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "configurationUnchanged": { "type": "boolean" },
+        "adapterExitCode": { "type": ["integer", "null"] },
+        "receiptError": { "type": "string" },
+        "verification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "success",
+            "exitCode",
+            "imageId",
+            "sourceHash",
+            "sourceUnchanged",
+            "harnessHash",
+            "stdout",
+            "stderr"
+          ],
+          "properties": {
+            "success": { "type": "boolean" },
+            "exitCode": { "type": ["integer", "null"] },
+            "imageId": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+            "sourceHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "sourceUnchanged": { "type": "boolean" },
+            "harnessHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "stdout": { "type": "string" },
+            "stderr": { "type": "string" }
+          }
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "taskId",
+        "language",
+        "synthetic",
+        "initialSourceHash",
+        "baseline",
+        "candidate"
+      ],
+      "properties": {
+        "taskId": { "type": "string", "minLength": 1 },
+        "language": {
+          "enum": ["javascript", "python", "go", "rust", "java", "csharp"]
+        },
+        "synthetic": { "const": true },
+        "baseline": { "$ref": "#/$defs/variant" },
+        "candidate": { "$ref": "#/$defs/variant" },
+        "initialSourceHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

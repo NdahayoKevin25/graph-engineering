@@ -1,34 +1,31 @@
 # tools/validate-graph
 
-Validates one generated *project's* graph — as opposed to `tools/validate-templates`, which validates the template library itself. This is the mechanical backend behind `ai/validation-agent` (see `graph-templates/ai/validation-agent/`): it implements the check categories from the original brief §19 and reports the same `{ valid, errors, warnings, repairs }` shape that agent's `output-schema.json` defines.
+Validates a generated project's versioned architecture and artifact contracts against the graph template registry. It is a read-only mechanical check; it does not run generation, application tests, or repairs.
 
 ```sh
-node index.js <path-to-generated-project> <path-to-graph-templates>
+npm ci --prefix graph-templates/tools/validate-graph
+node graph-templates/tools/validate-graph <project-directory> graph-templates
+npm test --prefix graph-templates/tools/validate-graph
 ```
 
-Reads `<project>/architecture.json` (the `architecture.schema` artifact — see `graph-templates/artifacts/architecture.schema.json`) and `<project>/.graph/manifest.json` (see `TEMPLATE-SPEC.md` §4) and cross-checks against `<graph-templates>/template-registry.json`.
+It exports `validate(projectDir, templatesRoot)`, `normalizeArchitecture()`, `normalizeManifest()`, and `normalizeArtifactType()` for application adapters. Importing the module does not run the CLI. See `ARTIFACT-SPEC.md` for v1 singleton import and v2 invocation identity.
 
-## Checks (brief §19 / §29)
+## Enforced checks
 
-| Check | How |
-|---|---|
-| Missing dependencies | Every node in `architecture.json`'s `nodes[]` must have every `requires`-relationship `dependencies.templates` entry (from the registry) also present in `nodes[]`, at an earlier `order`. |
-| Circular dependencies | Topological sort over `requires` edges across the selected node set; a cycle is an error, not a warning — the project cannot have been generated correctly. |
-| Invalid connections | An edge in `architecture.json`'s `edges[]` must reference two node ids both present in `nodes[]`. |
-| Missing environment variables | Every `environment.variables[].required: true` entry for a selected node must appear in the project's `.env.example` (or wherever `devops.environments` wrote its consolidated list). |
-| Duplicate functionality | Two selected nodes whose `dependencies.templates[].relationship: conflicts` lists each other. |
-| Version conflicts | A node's recorded `.graph/manifest.json` version is lower than the registry's current version for the same id and no migration path is noted (MAJOR version bump with no acknowledgement) — reported as a warning, not an error (a human/agent may deliberately pin an older version). |
-| Missing tests | A node with `testing.strategy` set in the registry but no corresponding entry in the project's `test.schema.json` `data.suites[].nodeId`. |
-| Orphan nodes | A node in `nodes[]` that no other node's `requires`/`extends` references AND that isn't itself a root (`project.*` category) AND that nothing in `edges[]` points to — usually means a node was generated but never wired in. |
-| Invalid schemas | Any of the project's artifact JSON files fails to validate against its schema in `graph-templates/artifacts/`. |
-| Broken imports | Best-effort: greps generated `.ts` files for `from '\.\./...'` imports that don't resolve to a file on disk — not a full TypeScript check (that's what `npm run build` in each node's own `validation.checks` is for; this is a cross-node sanity net). |
+- All present, recognized artifact files validate against their JSON Schema 2020-12 contracts. Architecture is required; unknown major architecture versions fail. Documented filename/type aliases normalize at the boundary, and duplicate artifact files fail.
+- Invocations have unique IDs, implemented registry templates, complete requirements, valid prerequisite bindings, and no template conflicts. Repeated prerequisites require explicit bindings.
+- Required dependencies, selected extensions, and explicit edges reference invocations and obey order. Cycles through any of these edge kinds fail.
+- Backend invocations with no incoming composition dependency produce orphan warnings independently for each instance.
+- Required environment keys must appear as actual assignments in `.env.example`; comments and substring matches do not count.
+- Manifest entries resolve to their architecture invocation and template. Major-version drift produces warnings.
+- Declared test suites resolve to invocations. A repeated template's suite cannot implicitly cover all its instances. Missing declared coverage produces warnings; a suite record is not evidence that tests passed.
 
 ## Output
 
-Same envelope as `ai/validation-agent`'s `output-schema.json`:
-
 ```json
-{ "valid": false, "errors": [...], "warnings": [...], "repairs": [...] }
+{ "valid": false, "errors": [{ "rule": "missing-dependencies", "check": "missing-dependencies", "nodeId": "backend.service:Invoice", "message": "..." }], "warnings": [], "repairs": [] }
 ```
 
-`repairs` is populated only for checks this tool knows a mechanical fix for (currently: missing `.env.example` entries — it can propose the exact line to add; everything else needs an agent or human).
+`rule` is canonical; `check` remains as a deprecated compatibility alias. `nodeId` in findings identifies an invocation. Exit status is zero exactly when there are no errors. Repairs are suggestions for missing environment keys only; validation never writes files.
+
+This checker does not resolve generated-language imports or arbitrary application-domain references between artifacts, and it does not prove an application builds. Run the generated application's compiler and tests separately. The coarse CLI's opt-in `create-graph-app/scripts/smoke-generated-apps.js` installs and builds representative frontend, backend, and full-stack projects.

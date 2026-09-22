@@ -1,246 +1,64 @@
 # Graph Engineering
 
-An AI-native, composable full-stack engineering template ecosystem — three related pieces built around one core idea: **a template registry is the reusable abstraction; whatever consumes it (an AI agent, a CLI) is just a caller.**
+A local-first engineering platform built on the existing Graph Engineering template ecosystem. Keep project context and reviewed memory on your machine, retrieve source-backed context through MCP, and run bounded coding work in isolated Git worktrees.
 
-```
-Graph-Engineering/
-├── reference-app/         The source application every template below is derived from —
-│                           an Express + Neon Postgres (Drizzle) + AWS S3 backend.
-│                           See REFERENCE_ARCHITECTURE.md for the full analysis.
-│
-├── graph-templates/       A fine-grained, ~55-node template library for AI-agent
-│                           orchestration — each node is a single composable layer
-│                           (a repository, a controller, a middleware...) with a full
-│                           machine-readable contract. Start at graph-templates/README.md.
-│
-├── create-graph-app/      An npm-distributed interactive CLI built on the same idea,
-│                           at a coarser grain — six complete, working templates
-│                           (Next.js, Zustand, shadcn/ui, Express, Neon Postgres, AWS S3)
-│                           a human picks from in under two minutes. Start at
-│                           create-graph-app/README.md.
-│
-└── REFERENCE_ARCHITECTURE.md   What reference-app/ actually does, and which of its
-                                 conventions the two template systems above preserve
-                                 vs. deliberately improve on, and why.
+```text
+repository → syntax graph + SQLite search + optional local embeddings
+                         ↓
+              context packets + reviewed memory
+                         ↓
+        policy + deterministic baseline + Laya/Jev shadow decisions
+                         ↓
+          coding worker → isolated patch → offline container checks
+                         ↓
+                 optional commit / draft PR into dev
 ```
 
-`graph-templates/` and `create-graph-app/` intentionally use **different** template metadata schemas — one is built for an AI agent sequencing dozens of fine-grained nodes with a full generate/validate/modify lifecycle, the other for a human answering six questions and getting a working project in one shot. See `create-graph-app/docs/architecture.md` §"Relationship to graph-templates/" for exactly how they relate and why they didn't converge on one shared schema.
+## Start
 
-This document covers the two things that sit above both subprojects: **publishing `create-graph-app` to npm**, and **how someone downloads/uses it once published**. Everything else (contributing a `graph-templates` node, writing a `create-graph-app` template, the CLI's own command reference) is documented inside each subproject — see the links above.
-
----
-
-## Publishing `create-graph-app` to npm
-
-`create-graph-app` lives at `./create-graph-app/` and is a complete, tested, buildable npm package already (54 passing tests, verified `npm pack` contents — see its own `README.md`). These are the steps to actually get it onto the public npm registry.
-
-### 0. Prerequisites
-
-- An npm account. Create one free at [npmjs.com/signup](https://www.npmjs.com/signup) if you don't have one, and verify your email — npm refuses to publish from an unverified account.
-- Node.js ≥ 18 and npm installed locally (already true in this environment).
-- Decide the package name. This guide uses `create-graph-app` throughout — **as of this writing that name is unclaimed on the public registry**, so you can publish under it directly. If someone claims it before you do, either pick a different unscoped name (update `package.json`'s `"name"` and the `docs/`/`README.md` references to match) or publish under an npm scope you own instead (e.g. `@yourusername/create-graph-app` — scoped packages need one extra flag at publish time, noted in step 5 below).
-
-### 1. Log in to npm from this machine
+Use Node.js 24 and Git. Docker is required for managed verification, not indexing or retrieval.
 
 ```sh
-npm login
-```
-
-Follow the browser prompt (or enter username/password/OTP if npm falls back to that flow). Confirm it worked:
-
-```sh
-npm whoami
-```
-
-should print your npm username, not an auth error.
-
-### 2. Fill in the package metadata npm's registry page shows
-
-`create-graph-app/package.json` currently has no `repository`, `author`, `bugs`, or `homepage` fields — none of these block publishing, but they're what makes the package's npm registry page (and `npm info create-graph-app`) actually useful to someone deciding whether to trust/install it. Before your first publish, add:
-
-```jsonc
-// create-graph-app/package.json
-{
-  "author": "Your Name <you@example.com>",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/your-username/your-repo.git",
-    "directory": "create-graph-app"
-  },
-  "bugs": "https://github.com/your-username/your-repo/issues",
-  "homepage": "https://github.com/your-username/your-repo/tree/main/create-graph-app#readme"
-}
-```
-
-This whole `Graph-Engineering/` directory isn't a git repository yet (no `.git/` — confirmed by `git status` failing at the root). If you want the `repository` field above to resolve to something real, push this project to GitHub first:
-
-```sh
-cd /Users/kevinndahayo/Documents/github/projects/Graph-Engineering
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/your-username/your-repo.git
-git push -u origin main
-```
-
-(Skip this if you'd rather publish without a linked repository for now — npm doesn't require it.)
-
-### 3. Run the full pre-publish check yourself, before npm does
-
-`npm publish` already runs `prepublishOnly` (`npm run build && npm run test`) automatically, but run it — and the packaging check — by hand first so you see any failure before it blocks a real publish attempt:
-
-```sh
-cd create-graph-app
-npm install
+npm ci
 npm run build
-npm test
-npm run pack:check
+npm run setup:git
+npm run graph -- -C /path/to/your/project init
+npm run graph -- -C /path/to/your/project index
+npm run graph -- -C /path/to/your/project serve
 ```
 
-All four should succeed (54 tests passing, the pack-contents check reporting every required file present). If anything fails, fix it before continuing — don't publish a broken build.
+Open the printed loopback URL for the dashboard. Projects default to local-only inference, no external network, no publication, and shadow-mode decisions. No models or credentials are provisioned implicitly.
 
-### 4. Do a real dry run
+See the [platform guide](docs/platform.md) for providers, MCP, context, memory, isolated runs, and policy configuration; [decision guide](docs/decisions.md) for Laya/Jev and evaluation; and [installed-worker limits](docs/installed-workers.md) for native client capabilities.
 
-See exactly what would be uploaded, without uploading anything:
+## Repository
+
+| Area                 | Purpose                                                                         |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `packages/contracts` | Versioned project, context, execution, and decision contracts                   |
+| `packages/engine`    | Local SQLite context engine, CLI, MCP, authenticated loopback API, managed runs |
+| `packages/dashboard` | React context, graph, memory, run, and decision interfaces                      |
+| `sidecars/laya`      | Explicitly provisioned, offline-serving decision sidecar                        |
+| `evaluation`         | 60 synthetic fixtures and a measured baseline/candidate runner                  |
+| `create-graph-app`   | Existing coarse-grained app scaffolder and six working templates                |
+| `graph-templates`    | Fine-grained node contracts, schemas, examples, and artifact validation         |
+| `reference-app`      | Source application behind the original templates                                |
+
+The two template systems intentionally retain their different schemas. Existing scaffolding remains usable independently; see [create-graph-app](create-graph-app/README.md), [graph templates](graph-templates/README.md), and the [reference architecture](REFERENCE_ARCHITECTURE.md).
+
+## Checks and collaboration
 
 ```sh
-npm publish --dry-run
+npm run check
+npm ci --prefix graph-templates/tools/validate-graph
+npm test --prefix graph-templates/tools/validate-graph
+GRAPH_ENGINE_DOCKER_TESTS=1 npm test -w @graph-engineering/engine
 ```
 
-Skim the file list it prints — it should match `npm run pack:check`'s report (dist/, templates/, schemas/, README.md, LICENSE, CHANGELOG.md — no src/, no tests/, no node_modules/).
+Use focused feature branches, reviewed PRs, and `dev` as the integration branch. Never push to `main`; commits use the human Git identity without AI co-author trailers. See [contributing](CONTRIBUTING.md). Release publishing is separate from normal development; the [CLI release guide](docs/publishing-cli.md) is reference material, not an automated publishing step.
 
-### 5. Publish
+## Current boundaries
 
-```sh
-npm publish
-```
+The graph is syntax-backed, not a complete semantic call graph. Missing language resolution and unavailable embeddings are reported. Local storage does not make a cloud-backed coding client offline: cloud export requires explicit policy and source-path permission. Laya/Jev scores do not prove code correct; verification and human PR review remain independent. No token-savings or engineering-accuracy claims are made without measured evaluation results.
 
-If you're publishing under a **scoped** name (`@yourusername/create-graph-app`) instead of the unscoped `create-graph-app`, scoped packages default to private on npm, so add the public-access flag or the publish will fail:
-
-```sh
-npm publish --access public
-```
-
-You'll be prompted for a one-time password if you have 2FA enabled (recommended — npm lets you require it for publishing specifically).
-
-### 6. Verify the published package for real
-
-From a completely different, empty directory (not inside this repo — you want to prove it works from what a real user would run):
-
-```sh
-cd /tmp
-npx create-graph-app@latest --version
-npx create-graph-app@latest list
-```
-
-Both should work against the version you just published, downloading it fresh rather than using anything cached locally from this development session.
-
-### 7. Publishing an update later
-
-1. Make your changes inside `create-graph-app/`.
-2. Update `CHANGELOG.md` with what changed.
-3. Bump the version — npm's helper does this and creates the matching git tag in one step (if this is a git repo by then):
-   ```sh
-   npm version patch   # bug fix — 0.1.0 -> 0.1.1
-   npm version minor    # new template or non-breaking feature -> 0.2.0
-   npm version major     # breaking CLI/config-format change -> 1.0.0
-   ```
-4. Repeat steps 3–6 above (build, test, pack:check, dry-run, publish, verify).
-
-Note npm's own rule, not this project's: once a version is published, you cannot publish that exact version number again, and `npm unpublish` is restricted (generally only within 72 hours of publishing, and can be blocked entirely if other packages depend on it) — always bump the version for a real change rather than trying to overwrite one that's live.
-
----
-
-## Using `create-graph-app` (once published)
-
-This is what a developer with no prior context does, end to end.
-
-### Step 1 — run it (no install needed)
-
-```sh
-npx create-graph-app
-```
-
-or, using npm's `create` convention (identical result):
-
-```sh
-npm create graph-app
-```
-
-npm fetches the latest published version and runs it — nothing is installed permanently unless the user chooses a global install later.
-
-### Step 2 — answer the wizard
-
-```Java
-┌─────────────────────────────────────────────┐
-│ Full-Stack Project Initializer              │
-└─────────────────────────────────────────────┘
-
-? What is your project name? › my-app
-? What type of project do you want to create? › Full-stack web application
-? Select your frontend framework: › Next.js
-? Select state management: › Zustand
-? Select UI system: › shadcn/ui
-? Select backend: › Express.js
-? Select database: › Neon PostgreSQL
-? Select your file/object storage: › AWS S3
-```
-
-A summary screen shows the exact file/dependency/environment-variable/documentation counts before anything is written, with **Create project / Go back / Cancel** as the final choice — nothing is generated until that's confirmed.
-
-### Step 3 — or skip the wizard entirely
-
-For scripting, CI, or just preferring flags:
-
-```sh
-npx create-graph-app my-app --non-interactive \
-  --frontend nextjs --state zustand --ui shadcn \
-  --backend express --database neon --storage s3
-```
-
-Any category left out defaults to "none" — non-interactive mode never generates something you didn't explicitly ask for.
-
-### Step 4 — see what you got, before doing anything else
-
-```sh
-cd my-app
-cat project.config.yaml     # exactly what was selected — your reproducibility record
-cat .env.example             # every environment variable your stack needs, no real values
-```
-
-### Step 5 — configure and run
-
-```sh
-cp .env.example .env
-# edit .env — set DATABASE_URL, AWS_* credentials, etc., per docs/SETUP.md
-npm run dev
-```
-
-For a full-stack project this starts both `apps/web` (Next.js, port 3001) and `apps/api` (Express, port 3000); for a single-selection project (backend-only or frontend-only), it starts the one app directly at the project root.
-
-### Step 6 — read the generated docs
-
-Every generated project ships its own documentation, written for exactly what was selected — not a generic template:
-
-- `README.md` — stack summary and quick start
-- `docs/SETUP.md`, `docs/ARCHITECTURE.md`, `docs/ENVIRONMENT.md`, `docs/DEVELOPMENT.md`
-- `docs/templates/<id>.md` — one page per template actually selected (e.g. `docs/templates/storage.aws-s3.md`), covering what it generated, how to configure it, security considerations, and how to replace it later
-
-### Step 7 — reproduce or share the exact same setup later
-
-```sh
-npx create-graph-app --config project.config.yaml
-```
-
-regenerates an equivalent project from the recorded selection — useful for spinning up a second identical environment, or for someone else on a team reproducing your exact stack choice.
-
-### Other commands worth knowing
-
-```sh
-npx create-graph-app list                 # see every available template
-npx create-graph-app info frontend.nextjs # full metadata for one template
-npx create-graph-app my-app --dry-run --non-interactive --backend express  # preview, write nothing
-npx create-graph-app validate             # check an existing project.config.yaml against the current registry
-```
-
-Full command/flag reference: `create-graph-app/docs/cli.md`. Full getting-started walkthrough: `create-graph-app/docs/getting-started.md`.
+The [evaluation corpus](evaluation/README.md) is a reproducible synthetic smoke suite, not evidence that routing is ready for autonomous architecture or security decisions. Promotion remains disabled until separately collected calibration and held-out results meet the documented gates.
