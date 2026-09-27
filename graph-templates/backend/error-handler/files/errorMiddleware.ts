@@ -10,10 +10,12 @@ export const errorHandler = (
   res: Response,
   next: NextFunction,
 ) => {
-  console.error(err.stack);
-
-  const status = err.status || 500;
-  const message = err.message || 'Something went wrong';
+  const status = Number.isInteger(err?.status) && err.status! >= 400 &&
+    (err.status! <= 499 || (err instanceof APIError && err.status <= 599)) ? err.status! : 500;
+  const message = status < 500 ? (err instanceof APIError ? err.message : 'Request failed') : 'Something went wrong';
+  // Never log error objects, stacks, URLs, headers, or bodies: dependency and
+  // delivery failures may embed credentials or one-time authentication tokens.
+  console.error('Request failed', { status });
 
   res.status(status).json({
     error: {

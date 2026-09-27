@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "deployment.schema.json",
   "title": "Deployment Schema Artifact",
-  "description": "Structured output of ai/devops-agent: container/CI configuration and required runtime environment.",
+  "description": "Structured container/CI declaration and named runtime environment requirements; it is not evidence of deployment or complete environment readiness.",
   "type": "object",
   "required": ["$schema", "artifactType", "version", "metadata", "data"],
   "properties": {
@@ -15,11 +15,16 @@
       "additionalProperties": false,
       "required": ["target", "requiredEnvVars"],
       "properties": {
-        "target": { "enum": ["docker", "serverless", "vm"] },
+        "target": { "enum": ["docker", "serverless", "vm", "ecs-express"] },
         "dockerfile": { "type": "string" },
         "ciProvider": { "enum": ["github-actions", "none"] },
         "ciFile": { "type": "string" },
+        "envInventoryComplete": {
+          "type": "boolean",
+          "description": "False means requiredEnvVars is incomplete; absence is unknown and never authorizes deployment."
+        },
         "requiredEnvVars": {
+          "description": "Public declarations only; an empty array may mean unknown/incomplete, not that the application requires no environment variables.",
           "type": "array",
           "items": {
             "type": "object",

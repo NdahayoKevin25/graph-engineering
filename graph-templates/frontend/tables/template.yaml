@@ -18,8 +18,16 @@ inputs:
   - { name: defaultPageSize, type: number, required: false, default: 20 }
 
 outputs:
-  - { name: files, type: array<string>, description: "lib/tables/useQueryTable.ts, components/DataTable.tsx" }
-  - { name: exports, type: array<string>, description: "useQueryTable, DataTable" }
+  - {
+      name: files,
+      type: array<string>,
+      description: "lib/tables/useQueryTable.ts, components/DataTable.tsx",
+    }
+  - {
+      name: exports,
+      type: array<string>,
+      description: "useQueryTable, DataTable",
+    }
 
 dependencies:
   packages: []
@@ -32,7 +40,10 @@ environment:
 
 files:
   create:
-    - { path: lib/tables/useQueryTable.ts, source: files/useQueryTable.ts.template }
+    - {
+        path: lib/tables/useQueryTable.ts,
+        source: files/useQueryTable.ts.template,
+      }
     - { path: components/DataTable.tsx, source: files/DataTable.tsx.template }
   modify: []
 
@@ -53,7 +64,11 @@ validation:
   checks:
     - { type: file-exists, path: lib/tables/useQueryTable.ts }
     - { type: file-exists, path: components/DataTable.tsx }
-    - { type: exports, path: lib/tables/useQueryTable.ts, names: [useQueryTable] }
+    - {
+        type: exports,
+        path: lib/tables/useQueryTable.ts,
+        names: [useQueryTable],
+      }
     - { type: build, command: "npm run build" }
 
 testing:
@@ -63,7 +78,7 @@ testing:
 
 security:
   considerations:
-    - "This hook sends whatever filter/sort keys it's given as raw query params — it does not itself allowlist them. The security boundary is entirely server-side: api.crud's findMany only applies keys present in its filterableFields/sortableFields allowlist and silently ignores everything else (see api.crud's README). Never treat client-side filter UI as a security control, and never build a page that lets a user type an arbitrary column name into a filter box expecting the server to reject it loudly — it won't reject, it will just ignore."
+    - "The audited runtime bounds filter/sort field syntax, reserved keys and resource use, but server-side field and row-authorization allowlists remain authoritative. It validates object-row and pagination envelopes, aborts stale fetches and never treats hidden UI as access control."
     - "meta.totalPages/page come from the server response, not computed client-side — never let pagination controls compute their own bounds from a stale rows.length, which could drift from the server's actual count under concurrent writes."
 
 documentation:

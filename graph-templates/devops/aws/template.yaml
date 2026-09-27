@@ -1,20 +1,49 @@
 id: devops.aws
-name: AWS Deployment (ECS / App Runner / Lambda)
-version: 0.1.0
+name: AWS ECS Express Mode Descriptor
+version: 1.0.0
 description: >
-  Planned. Deploys the devops.docker image to an AWS compute target (ECS
-  Fargate, App Runner, or Lambda via a container image) — not yet implemented.
-  A future implementation should reuse devops.docker's image unmodified and
-  add only the target-specific deploy manifest (task definition, apprunner.yaml,
-  or Lambda container config), not a parallel Dockerfile.
+  Offline-only, reviewed CreateExpressGatewayService request JSON for an
+  existing digest-pinned private ECR image built from devops.docker. It records
+  explicit IAM roles, VPC IDs, container port and ARN-only secret references;
+  generation makes no AWS call and does not create or deploy any resource.
 category: devops
 subcategory: aws
-status: planned
+status: implemented
 type: graph-node
-actions: []
+actions: [generate, detect, validate]
 
-inputs: []
-outputs: []
+inputs:
+  - { name: serviceName, type: string, required: true }
+  - {
+      name: imageUri,
+      type: string,
+      required: true,
+      description: "Private ECR URI pinned by sha256 image digest",
+    }
+  - { name: port, type: number, required: true }
+  - { name: executionRoleArn, type: string, required: true }
+  - { name: infrastructureRoleArn, type: string, required: true }
+  - { name: taskRoleArn, type: string, required: true }
+  - { name: subnetIds, type: array<string>, required: true }
+  - { name: securityGroupIds, type: array<string>, required: true }
+  - {
+      name: secrets,
+      type: array<object>,
+      required: true,
+      description: "Explicit ARN references or an empty array",
+    }
+  - {
+      name: acknowledgeUnverifiedAwsPrerequisites,
+      type: boolean,
+      required: true,
+      description: "Acknowledge that IAM, network, image provenance and deployment remain externally unverified",
+    }
+outputs:
+  - {
+      name: files,
+      type: array<string>,
+      description: "Local ECS Express Mode request JSON",
+    }
 
 dependencies:
   packages: []
@@ -26,7 +55,11 @@ environment:
   variables: []
 
 files:
-  create: []
+  create:
+    - {
+        path: deploy/ecs-express-create-service.json,
+        source: files/ecs-express-create-service.json.template,
+      }
   modify: []
 
 compatible_with:
@@ -34,25 +67,32 @@ compatible_with:
   downstream: []
 
 consumes:
-  artifacts: [deployment.schema]
+  artifacts: [Dockerfile]
 produces:
-  artifacts: [deployment.schema]
+  artifacts: [deploy/ecs-express-create-service.json]
 
 idempotency:
   strategy: detect-and-skip
-  detection: "not applicable — planned"
+  detection: "deploy/ecs-express-create-service.json exists with identical reviewed content"
 
 validation:
-  checks: []
+  checks:
+    - { type: file-exists, path: deploy/ecs-express-create-service.json }
+    - { type: build, command: "npm run build" }
 
 testing:
-  strategy: none
-  location: ""
-  command: ""
+  strategy: unit
+  location: packages/engine/tests/template-runtime-aws.test.ts
+  command: "npm test -- tests/template-runtime-aws.test.ts"
 
 security:
   considerations:
-    - "Deferred until implemented — will need to cover IAM least-privilege for the deploy role, secret injection via AWS Secrets Manager/Parameter Store (never plaintext task-definition env vars for secret: true variables)."
+    - "Rendering is offline and creates only a local request document; it does not call AWS, deploy, provision IAM/VPC resources or verify permissions. Executing this request later would provision chargeable resources and requires separate operator review."
+    - "The private ECR image is digest-pinned; the target Dockerfile must exactly match devops.docker for the selected port. The digest-to-Dockerfile provenance remains an external operator check."
+    - "Execution, infrastructure and task role ARNs are distinct and same-account; IAM policies, trust relationships and runtime reachability are not validated offline."
+    - "Only Secrets Manager and SSM Parameter Store ARNs enter primaryContainer.secrets; plaintext environment, command and repository credentials are not emitted."
+    - "Explicit VPC subnet/security-group IDs are required; route tables, ALB ingress, outbound access and availability-zone placement require external review."
+    - "The generated descriptor is always excluded from cloud context export, including with a broad exportPaths policy; engine publication refuses it in the current tree or reachable branch history."
 
 documentation:
-  required: []
+  required: [README.md]

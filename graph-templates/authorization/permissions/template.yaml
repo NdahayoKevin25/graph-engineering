@@ -1,55 +1,70 @@
 id: authorization.permissions
-name: Permission Matrix
-version: 0.1.0
+name: Granular Permission Gate
+version: 1.0.0
 description: >
-  A granular resource:action permission-matrix alternative/extension to
-  authorization.rbac's fixed role list — e.g. `products:delete`,
-  `orders:refund` as individually grantable permissions rather than baking
-  everything into a small role enum. Not yet implemented in this library.
+  Generates a default-deny resource:action permission gate over a bounded,
+  reviewed permission vocabulary. An application-owned hasPermission adapter
+  resolves each authenticated user's current grants from durable trusted data.
+  This node does not invent grant storage, grant-management endpoints, or route
+  policy; the application must provide and review those separately.
 category: authorization
 subcategory: permissions
-status: planned
+status: implemented
 type: graph-node
-actions: [generate]
+actions: [generate, detect, validate, test]
 
-inputs: []
-outputs: []
+inputs:
+  - { name: permissions, type: array<string>, required: true, description: "Unique resource:action names to permit in route declarations (1-32)." }
+outputs:
+  - { name: files, type: array<string>, description: "Permission middleware and generated tests." }
+  - { name: exports, type: array<string>, description: "PERMISSIONS and requirePermission." }
 
 dependencies:
-  packages: []
+  packages:
+    - { name: express, version: "^4.22.3" }
+    - { name: vitest, version: "4.1.11", dev: true }
   services: []
   templates:
+    - { id: authentication.jwt, relationship: requires }
+    - { id: backend.error-handler, relationship: requires }
     - { id: authorization.rbac, relationship: extends }
 
 environment:
   variables: []
 
 files:
-  create: []
+  create:
+    - { path: src/middlewares/permissionMiddleware.ts, source: files/permissionMiddleware.ts.template }
   modify: []
 
 compatible_with:
-  upstream: [authentication.jwt, authorization.rbac]
-  downstream: []
+  upstream: [authentication.jwt, authorization.rbac, backend.error-handler]
+  downstream: [backend.express, api.crud]
 
 consumes:
-  artifacts: []
-produces:
   artifacts: [auth.schema]
+produces:
+  artifacts: []
 
 idempotency:
   strategy: detect-and-skip
-  detection: "not applicable — planned"
+  detection: "Identical generated middleware and test already exist; divergent files require review."
 
 validation:
-  checks: []
+  checks:
+    - { type: file-exists, path: src/middlewares/permissionMiddleware.ts }
+    - { type: exports, path: src/middlewares/permissionMiddleware.ts, names: [PERMISSIONS, requirePermission] }
+    - { type: build, command: "npm run build" }
 
 testing:
-  strategy: none
+  strategy: unit
+  location: tests/permissionMiddleware.test.ts
+  command: "npm test -- permissionMiddleware"
 
 security:
   considerations:
-    - "A permission matrix is only as safe as its default-deny posture once implemented — an unlisted permission must resolve to denied, never allowed."
+    - "Unknown permissions fail during route registration. Missing or invalid authenticated identities return 401; ungranted permissions return 403; grant-lookup failures return 503 without leaking adapter details. Only an explicit true grant continues."
+    - "Mount authMiddleware before requirePermission on each protected route. No route is auto-protected and no grant-management endpoint or storage is generated. The app-owned authorizer must use trusted, current user-global grants and deny by default. Tenant-scoped resources require a separate reviewed tenant guard and tenant-scoped data access."
 
 documentation:
-  required: []
+  required: [README.md]

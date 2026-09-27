@@ -1,0 +1,73 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import request from 'supertest';
+
+const state = vi.hoisted(() => ({ query: vi.fn() }));
+vi.mock('../src/config/database', () => ({ pool: { query: state.query } }));
+vi.mock('../src/middlewares/authMiddleware', () => ({
+  authMiddleware: (_req: unknown, res: { status: (value: number) => { json: (body: unknown) => void } }) =>
+    res.status(401).json({ error: 'Unauthorized' }),
+}));
+
+import app from '../src/app';
+import { parse__ENTITY__SearchQuery, search__ENTITY__, SearchQueryError } from '../src/search/__CAMEL__Search';
+
+const id = '11111111-1111-4111-8111-111111111111';
+beforeEach(() => state.query.mockReset());
+describe('api.search __ENTITY__', () => {
+  it('rejects malformed, nested, extra, unbounded and control-character query inputs', () => {
+    for (const value of [
+      {q: 'x'}, {q: 'graph', page: '0'}, {q: 'graph', page: '01'},
+      {q: 'graph', pageSize: '51'}, {q: ['graph']}, {q: 'graph', sortBy: 'name'},
+      {q: 'graph\nengineering'}, {q: Array(13).fill('word').join(' ')},
+      {q: 'a'.repeat(161)}, {q: '🙂'.repeat(65)},
+    ]) expect(() => parse__ENTITY__SearchQuery(value)).toThrow(SearchQueryError);
+  });
+
+  it('binds query and pagination values while returning ranked IDs and a stable total', async () => {
+    state.query.mockResolvedValueOnce({rows:[{total:'2',id,rank:0.8}]});
+    const attack = "graph'); DROP TABLE products; --";
+    const result = await search__ENTITY__({q:attack,page:'2',pageSize:'1'});
+    expect(result).toEqual({data:[{id,rank:0.8}],pagination:{page:2,pageSize:1,total:2}});
+    const [sql, values] = state.query.mock.calls[0];
+    expect(sql).toContain('plainto_tsquery');
+    expect(sql).toContain('$1::text');
+    expect(sql).toContain('ORDER BY rank DESC, id ASC');
+    expect(sql).not.toContain(attack);
+    expect(values).toEqual([attack,1,1]);
+    state.query.mockResolvedValueOnce({rows:[{total:'2',id:null,rank:null}]});
+    expect(await search__ENTITY__({q:'graph',page:3,pageSize:1})).toEqual({
+      data:[],pagination:{page:3,pageSize:1,total:2},
+    });
+  });
+
+  it('mounts a nonpublic route that rejects unauthenticated requests before querying', async () => {
+    const response = await request(app).get('/api/search/__TABLE__?q=graph');
+    expect(response.status).toBe(401);
+    expect(state.query).not.toHaveBeenCalled();
+  });
+
+  it('does not put the search query in Morgan output, including denied requests', async () => {
+    const query = 'private-graph-search-query';
+    const output: string[] = [];
+    const write = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => {
+      output.push(String(chunk));
+      return true;
+    });
+    try {
+      for (const pathname of ['/api/search/__TABLE__', '/API/SEARCH/__TABLE__/']) {
+        const response = await request(app).get(`${pathname}?q=${query}`);
+        expect(response.status).toBe(401);
+      }
+      expect((await request(app).get(`/api/search?q=${query}`)).status).toBe(404);
+      expect((await request(app).post(`/api/search/__TABLE__?q=${query}`)).status).toBe(404);
+      expect((await request(app).get('/')).status).toBe(200);
+      expect(output.join('')).not.toContain(query);
+      expect(output.join('')).toContain('GET / ');
+      const ordinary = 'ordinary-route-canary';
+      expect((await request(app).get(`/api/searching?q=${ordinary}`)).status).toBe(404);
+      expect(output.join('')).toContain(ordinary);
+    } finally {
+      write.mockRestore();
+    }
+  });
+});

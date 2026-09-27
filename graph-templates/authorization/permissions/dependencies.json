@@ -1,0 +1,12 @@
+{
+  "packages": [
+    { "name": "express", "version": "^4.22.3" },
+    { "name": "vitest", "version": "4.1.11", "dev": true }
+  ],
+  "services": [],
+  "templates": [
+    { "id": "authentication.jwt", "relationship": "requires" },
+    { "id": "backend.error-handler", "relationship": "requires" },
+    { "id": "authorization.rbac", "relationship": "extends" }
+  ]
+}

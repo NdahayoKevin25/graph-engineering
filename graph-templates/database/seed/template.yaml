@@ -4,8 +4,9 @@ version: 1.0.0
 description: >
   Generates a standalone src/scripts/seed.ts that inserts example rows for
   one or more entities backend.repository created, runnable via `npm run seed`.
-  Refuses to run when NODE_ENV is production, since a seed script is a
-  destructive/idempotent-unsafe operation that must never touch a live database.
+  Requires an explicitly acknowledged isolated loopback development/test
+  database with a separate URL. Inserts all rows transactionally into empty
+  targets, refusing existing data rather than silently duplicating or replacing it.
 category: database
 subcategory: seed
 status: implemented
@@ -35,7 +36,7 @@ files:
   create:
     - { path: src/scripts/seed.ts, source: files/seed.ts.template }
   modify:
-    - { path: package.json, operation: merge-json, template: "{ \"scripts\": { \"seed\": \"ts-node ./src/scripts/seed.ts\" } }" }
+    - { path: package.json, operation: merge-json, template: '{"scripts":{"seed":"node dist/scripts/seed.js"}}' }
 
 compatible_with:
   upstream: [database.neon-postgres.connection, backend.repository]
@@ -53,11 +54,11 @@ idempotency:
 validation:
   checks:
     - { type: file-exists, path: src/scripts/seed.ts }
-    - { type: build, command: "npm run build" }
+    - { type: build, command: "npm --ignore-scripts run build", sandbox: docker }
     - type: content-contains
       path: src/scripts/seed.ts
-      pattern: "NODE_ENV"
-      description: "The production guard must be present — a seed script with no environment check fails validation."
+      pattern: "operationDatabaseOptions('seed')"
+      description: "The central explicit environment/target/acknowledgement guard must be present."
 
 testing:
   strategy: integration
@@ -66,7 +67,8 @@ testing:
 
 security:
   considerations:
-    - "The generated script's first statement checks SECRETS.NODE_ENV !== 'production' and throws if it is — a seed script run against a production DATABASE_URL is a data-corruption incident waiting to happen, so this is not optional/configurable."
+    - "No DATABASE_URL fallback. SEED_DATABASE_URL must name numeric loopback, a database ending _test/_seed/_dev, NODE_ENV development/test, exact GRAPH_DATABASE_EXPECTED_NAME and GRAPH_DATABASE_SEED=isolated-seed-database. Remote seeds are unsupported."
+    - "All entities insert in one transaction under an advisory lock. Nonempty targets fail closed; successful seeds are not silently rerun. No raw SQL/error/data logging."
     - "Sample data must never include real credentials or PII — sampleRows are literal fixture data supplied by the caller, this node does not fetch or fabricate real-looking personal data."
 
 documentation:

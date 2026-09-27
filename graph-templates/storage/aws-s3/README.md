@@ -1,6 +1,14 @@
 # storage.aws-s3
 
-**What.** `s3Client` (an S3-*compatible* `@aws-sdk/client-s3` client — works against real AWS, Neon Object Storage, Cloudflare R2, or MinIO, not just AWS) and `storageBucket`, ported from the reference app's `s3-client.ts`. `forcePathStyle: true` and an explicit `AWS_ENDPOINT_URL_S3` are what make it compatible beyond AWS.
+## Executable runtime
+
+The audited renderer emits `s3Client`, `storageBucket`, a shared scoped authorization policy and an emitted scope test, and updates the scaffold's environment helper. It requires an administrator-controlled HTTPS endpoint and explicit credentials. It does not inspect or configure bucket/IAM privacy. Malformed configuration errors are redacted.
+
+Use the [audited storage runtime documentation](../../../docs/storage-runtime.md) for the supported APIs, pinned verification fixture and deployment responsibilities. The catalog assets described below are historical source examples, not the hardened runtime implementation; compatibility with individual S3 providers has not been live-verified.
+
+## Historical catalog asset
+
+**What.** `s3Client` (an S3-_compatible_ `@aws-sdk/client-s3` client — works against real AWS, Neon Object Storage, Cloudflare R2, or MinIO, not just AWS) and `storageBucket`, ported from the reference app's `s3-client.ts`. `forcePathStyle: true` and an explicit `AWS_ENDPOINT_URL_S3` are what make it compatible beyond AWS.
 
 **When.** After `project.node-express`. Before any of `storage.upload`/`storage.download`/`storage.presigned-url`/`storage.delete`, which all import `s3Client`/`storageBucket` from this node's output.
 

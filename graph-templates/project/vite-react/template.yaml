@@ -1,0 +1,119 @@
+id: project.vite-react
+name: Vite React Project Scaffold
+version: 1.0.0
+description: >
+  Bootstraps a pinned Vite, React and TypeScript client-rendered application
+  as a separate frontend. It emits a minimal home view, build and test setup,
+  validated public API origin and deterministic public generation ledger.
+  Routing, authentication pages and server rendering are not supplied.
+category: project
+subcategory: vite-react
+status: implemented
+type: graph-node
+actions: [generate, detect, validate]
+
+inputs:
+  - {
+      name: projectName,
+      type: string,
+      required: true,
+      description: 'package.json "name" field.',
+    }
+  - { name: description, type: string, required: false, default: "" }
+  - {
+      name: port,
+      type: number,
+      required: false,
+      default: 3001,
+      description: "Vite development and preview port; defaults off the backend's port 3000.",
+    }
+  - {
+      name: apiBaseUrl,
+      type: string,
+      required: false,
+      default: "http://localhost:3000",
+      description: "Public origin of the Express API.",
+    }
+
+outputs:
+  - { name: files, type: array<string> }
+  - { name: entrypoint, type: string, description: "src/main.tsx" }
+
+dependencies:
+  packages:
+    - { name: react, version: "19.3.0" }
+    - { name: react-dom, version: "19.3.0" }
+    - { name: "@testing-library/jest-dom", version: "7.0.1", dev: true }
+    - { name: "@testing-library/react", version: "16.3.3", dev: true }
+    - { name: "@types/node", version: "24.0.0", dev: true }
+    - { name: "@types/react", version: "19.3.0", dev: true }
+    - { name: "@types/react-dom", version: "19.3.0", dev: true }
+    - { name: "@vitejs/plugin-react", version: "5.2.0", dev: true }
+    - { name: jsdom, version: "30.1.1", dev: true }
+    - { name: typescript, version: "5.9.3", dev: true }
+    - { name: vite, version: "7.3.6", dev: true }
+    - { name: vitest, version: "4.1.11", dev: true }
+  services: []
+  templates:
+    - { id: project.nextjs, relationship: conflicts }
+
+environment:
+  variables:
+    - {
+        name: VITE_API_URL,
+        required: false,
+        secret: false,
+        description: "Optional public build-time Express API origin; empty uses the reviewed code default.",
+        usedBy: [project.vite-react, frontend.react],
+      }
+
+files:
+  create:
+    - { path: package.json, source: files/package.json.template }
+    - { path: tsconfig.json, source: files/tsconfig.json }
+    - { path: vite.config.ts, source: files/vite.config.ts }
+    - { path: index.html, source: files/index.html.template }
+    - { path: .env.example, source: files/.env.example.template }
+    - { path: .gitignore, source: files/.gitignore }
+    - { path: vitest.config.ts, source: files/vitest.config.ts }
+    - { path: vitest.setup.ts, source: files/vitest.setup.ts }
+    - { path: src/main.tsx, source: files/src/main.tsx }
+    - { path: src/App.tsx, source: files/src/App.tsx }
+    - { path: src/globals.css, source: files/src/globals.css }
+    - { path: lib/env.ts, source: files/lib/env.ts.template }
+    - { path: .graph/manifest.json, source: files/.graph/manifest.json.template }
+  modify: []
+
+compatible_with:
+  upstream: []
+  downstream: [frontend.react]
+
+consumes:
+  artifacts: [architecture.schema]
+produces:
+  artifacts: []
+
+idempotency:
+  strategy: detect-and-skip
+  detection: "All generated files exactly match the audited scaffold"
+
+validation:
+  checks:
+    - { type: file-exists, path: package.json }
+    - { type: file-exists, path: index.html }
+    - { type: file-exists, path: src/main.tsx }
+    - { type: build, command: "npm run build" }
+
+testing:
+  strategy: unit
+  location: tests/App.test.tsx
+  command: "npm test -- App"
+
+security:
+  considerations:
+    - "VITE_API_URL is embedded in the browser build. It must contain only a public HTTPS origin or explicit loopback HTTP origin, never credentials or secrets."
+    - "The renderer writes proposals only; it never installs packages, creates a network-dependent lockfile, starts a server or configures deployment. Provision and review dependencies separately."
+    - "The scaffold does not configure CORS, cookie policy or backend authorization. Cookie-based API requests need same-site deployment and exact credentialed CORS/trusted-Origin approval when origins differ."
+
+documentation:
+  required: [README.md]

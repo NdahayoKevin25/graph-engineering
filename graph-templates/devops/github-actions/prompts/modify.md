@@ -1,1 +1,1 @@
-To add a new secret-consuming step, add it under the `env:` block of the relevant job rather than introducing a new top-level `env:` at workflow scope — keeps secret exposure scoped to the step that needs it.
+Do not add secrets to automatic PR/push jobs or top-level workflow env. Require an explicit reviewed change to existing custom workflows. Migration/deployment credentials belong only in separately guarded manual jobs with exact trusted-ref and protected-environment checks; naming an environment does not configure or verify its approval policy.

@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "providers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "google",
+          "github",
+          "oidc"
+        ]
+      },
+      "default": [
+        "google",
+        "github"
+      ]
+    },
+    "postLoginRedirects": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "maxLength": 200,
+        "pattern": "^/(?:[A-Za-z0-9_~-][A-Za-z0-9._~-]*(?:/[A-Za-z0-9_~-][A-Za-z0-9._~-]*)*)?$"
+      },
+      "default": [
+        "/"
+      ]
+    },
+    "linkVerifiedEmailToExistingAccount": {
+      "type": "array",
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "google",
+          "github",
+          "oidc"
+        ]
+      },
+      "default": []
+    },
+    "oidc": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "issuer",
+        "authorizationEndpoint",
+        "tokenEndpoint",
+        "jwksUri"
+      ],
+      "properties": {
+        "issuer": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^https://"
+        },
+        "authorizationEndpoint": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^https://"
+        },
+        "tokenEndpoint": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^https://"
+        },
+        "jwksUri": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^https://"
+        }
+      }
+    }
+  }
+}

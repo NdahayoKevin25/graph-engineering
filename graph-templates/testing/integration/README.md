@@ -1,17 +1,34 @@
 # testing.integration
 
-**What.** `tests/setup/testDatabase.ts`: `getTestDatabase()` (a cached Drizzle connection, same Neon serverless driver as `database.neon-postgres.connection`) and `truncateAllTables(tableNames)` (destructive — `TRUNCATE ... CASCADE` on each named table). Distinct from `testing.unit`, which mocks the repository instead of hitting a real database.
+Generates `tests/setup/testDatabase.ts` and guard tests. The helper uses `pg`
+and `drizzle-orm/node-postgres`, so an ordinary disposable PostgreSQL database
+works without a Neon WebSocket proxy. Declare `pg`, its TypeScript types,
+Drizzle, and Vitest explicitly; the runtime does not install dependencies.
 
-**When.** After `database.neon-postgres.connection`. Used by any test that needs to verify real SQL behavior a mock can't (constraint violations, transaction rollback, actual pagination against real rows).
+Exports: `getTestDatabase()`, `truncateAllTables(tableNames)`, and
+`closeTestDatabase()`. Close the pool in suite teardown. Changing its URL while
+the pool is open fails rather than silently reusing the previous connection.
 
-**Requires.** `database.neon-postgres.connection`.
+Both connecting and cleanup require `NODE_ENV=test` and an explicit
+`TEST_DATABASE_URL` naming a database ending in `_test`. There is **no**
+`DATABASE_URL` fallback. A matching application URL target is rejected even
+when credentials differ. URL driver overrides, certificate filesystem paths,
+and duplicate query options are forbidden; test TLS supports `verify-full`,
+or `disable` for an isolated local test database.
 
-**Produces.** `tests/setup/testDatabase.ts` exporting `getTestDatabase`, `truncateAllTables`.
+Cleanup is destructive and additionally requires
+`GRAPH_TEST_DATABASE_ALLOW_TRUNCATE=1`. It validates all identifiers before
+connecting, then truncates only the listed `public` tables in one atomic
+statement with identity reset. There is no `CASCADE`: unlisted foreign-key
+dependents make cleanup fail rather than losing their rows.
 
-**Connects to.** Downstream: any `backend.repository`/`api.crud`-generated entity that wants an integration suite alongside its unit suite.
+Database names and URL comparisons are defense in depth, **not proof of
+isolation**: aliases can resolve to the same server. Provision a disposable
+database and a role without production privileges. Never point this helper at
+valuable data, even if it happens to have a `_test` suffix.
 
-**Configure via.** `TEST_DATABASE_URL` (recommended: a separate, disposable Neon branch or local Postgres — never the same database as `DATABASE_URL`).
-
-**Test.** `npm test -- testDatabase` — asserts `getTestDatabase()`/`truncateAllTables` throw immediately when `NODE_ENV=production`, regardless of what `TEST_DATABASE_URL` is set to.
-
-**Security — read before using `truncateAllTables`.** It is unconditionally destructive: every row in every table you name is gone. Two guards exist: (1) a hard throw if `NODE_ENV=production`, checked in *both* `getTestDatabase` and `truncateAllTables` independently so neither can be called alone to route around the other; (2) a loud `console.warn` (not a block — see rationale in `template.yaml`) if `TEST_DATABASE_URL` isn't set and the code is about to fall back to `DATABASE_URL`. Always set `TEST_DATABASE_URL` in CI and locally; treat the warning as a bug to fix, not noise to ignore.
+`npm test -- testDatabase` runs the no-connection guard tests. The platform's
+separate Docker suite also exercises real PostgreSQL, strict TypeScript,
+foreign-key failure atomicity, selected-table cleanup, and preservation of an
+unlisted table. PostgreSQL and tests run inside one network-disabled container;
+the suite never uses the host's database or credentials.

@@ -1,28 +1,29 @@
-import { database } from '../config/database';
-import { SECRETS } from '../utils/helpers';
-import {
-{{#each input.entities}}
-  {{this.tableExportName}},
-{{/each}}
-} from '../config/schema';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { sql } from 'drizzle-orm';
+import { operationDatabaseOptions } from '../config/database-url';
+import { {{TABLE_IMPORTS}} } from '../config/schema';
 
-if (SECRETS.NODE_ENV === 'production') {
-  throw new Error('Refusing to run the seed script against a production environment.');
+// GRAPH-SEED-DATA: immutable reviewed JSON fixture metadata; never executable expressions.
+const seedData = {{SEED_DATA}};
+// GRAPH-SEED-DATA-END
+
+export async function seedDatabase(): Promise<void> {
+  const pool = new Pool(operationDatabaseOptions('seed'));
+  pool.on('error', () => { console.error('Seed connection failed.'); });
+  try {
+    await drizzle(pool).transaction(async (transaction) => {
+      const lock = await transaction.execute(sql`SELECT pg_try_advisory_xact_lock(174824711, 1) AS locked`);
+      if (lock.rows[0]?.locked !== true) throw new Error('A database operation is already active.');
+{{SEED_INSERTS}}
+    });
+  } catch { throw new Error('Reviewed seed failed; transaction rolled back and fixture values are not exposed.'); }
+  finally { await pool.end(); }
 }
 
-async function seed(): Promise<void> {
-{{#each input.entities}}
-  await database.insert({{this.tableExportName}}).values({{json this.sampleRows}});
-  console.log('Seeded {{this.entityName}}: {{this.sampleRows.length}} row(s)');
-{{/each}}
-}
-
-seed()
-  .then(() => {
-    console.log('Seed complete.');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('Seed failed:', error);
-    process.exit(1);
+if (require.main === module) {
+  seedDatabase().then(() => { console.log('Reviewed seed completed.'); }).catch(() => {
+    console.error('Seed failed; transaction rolled back. Credentials, SQL, and fixture values are not logged.');
+    process.exitCode = 1;
   });
+}

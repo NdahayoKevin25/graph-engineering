@@ -1,0 +1,1 @@
+{ "packages": [], "services": [], "templates": [{ "id": "frontend.authentication", "relationship": "requires" }, { "id": "frontend.tables", "relationship": "requires" }, { "id": "frontend.forms", "relationship": "requires" }] }

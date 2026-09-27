@@ -1,5 +1,25 @@
 # devops.environments
 
+## Managed runtime
+
+The audited renderer reads schema-valid `architecture.json` and the selected
+installed catalog manifests. It merges repeated variable names conservatively
+(required and secret are OR-combined), emits **blank values only**, and never
+reads a live `.env`, process environment, or private memory. Output is derived
+from declarations, not proof that any deployment has been configured.
+
+Default project policy excludes `.env.*`, including `.env.example`. This node
+does not weaken that policy automatically. An owner may explicitly replace
+that pattern with `.env.!(example)` to allow just the example while retaining
+`.env` and other exclusions; test the complete policy before enabling it.
+Generation still fails if any independent exclusion denies the source/output.
+
+Generated documents carry ownership and input hashes. Identical output is a
+no-op; changed declarations regenerate owned documentation. Existing unowned
+documents and examples containing filled-in values are refused for explicit
+review rather than overwritten. The original scaffold's example therefore
+needs an explicit reviewed migration before this renderer takes ownership.
+
 **What.** Consolidates every selected node's `environment.variables` (declared in each node's own `template.yaml`) into one `.env.example` and one `docs/ENVIRONMENT.md` table — superseding `project.node-express`'s minimal starter `.env.example`, which only knows about its own three variables.
 
 **When.** Conceptually last — it needs to see what every other selected node declared, so it should run after the graph's other nodes, not interleaved with them.

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["files"],
+  "properties": {
+    "files": {
+      "const": [
+        "Dockerfile",
+        ".dockerignore",
+        "docker-compose.yml",
+        ".github/workflows/ci.yml",
+        "deploy/ecs-express-create-service.json",
+        "deployment.schema.json"
+      ]
+    }
+  }
+}

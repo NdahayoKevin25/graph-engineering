@@ -2,5 +2,6 @@
   { "name": "read_template_registry", "description": "Checks frontend.* node status — implemented vs. planned — before invoking one" },
   { "name": "read_artifact", "description": "Reads architecture.json / api.schema.json / auth.schema.json" },
   { "name": "write_artifact", "description": "Writes frontend.schema.json" },
-  { "name": "resolve_dependencies", "description": "Confirms frontend.authentication's requires edges (frontend.nextjs, authentication.password) are satisfied before invoking it" }
+  { "name": "resolve_dependencies", "description": "Confirms the selected root/client pair and, on the Next.js path, the exact prerequisites for authentication/forms/tables/dashboards" },
+  { "name": "invoke_node", "description": "Runs a graph node's generate action for the selected root/client pair and supported feature nodes (Next.js: project.nextjs, frontend.nextjs, frontend.authentication, frontend.forms, frontend.tables, frontend.dashboards; Vite React: project.vite-react, frontend.react)" }
 ]

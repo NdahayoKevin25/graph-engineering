@@ -1,5 +1,4 @@
 import * as clack from '@clack/prompts';
-import { Registry } from '../registry/registry';
 import { ProjectConfig, Template } from '../types';
 import { promptOrExit } from './prompt-helpers';
 

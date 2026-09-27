@@ -1,48 +1,78 @@
 id: api.search
-name: Full-Text / Fuzzy Search
-version: 0.1.0
+name: PostgreSQL Full-Text Search
+version: 1.0.0
 description: >
-  Genuinely distinct future capability (Postgres tsvector/pg_trgm full-text or
-  fuzzy search across one or more entities) — not implemented; not faked as a
-  thin wrapper over api.crud's exact-match filtering, which it is not a
-  substitute for. Planned: a search index column/migration, a query-parsing
-  node analogous to backend.pagination, and a ranked-results response shape
-  distinct from api.schema.json's plain route list.
+  Adds a PostgreSQL English full-text GIN expression index declaration and a
+  bounded authMiddleware-gated ranked search endpoint for one existing reviewed
+  Drizzle table. Query text and pagination are bound PostgreSQL parameters;
+  no user-supplied identifier or sort expression reaches SQL. The index still
+  requires a separately generated, reviewed and applied migration.
 category: api
 subcategory: search
-status: planned
+status: implemented
 type: graph-node
-actions: []
-inputs: []
-outputs: []
+actions: [generate, detect, validate, test]
+inputs:
+  - { name: entityName, type: string, required: true, description: "PascalCase entity whose reviewed pgTable exists." }
+  - { name: tableName, type: string, required: true, description: "Literal SQL table name matching the reviewed pgTable." }
+  - { name: searchFields, type: array<string>, required: true, description: "One to four distinct text/varchar properties of that table." }
+outputs:
+  - { name: files, type: array<string>, description: "Search source, route, tests and exact schema/app changes." }
+  - { name: routes, type: array<string>, description: "authMiddleware-gated GET /api/search/<tableName>." }
+  - { name: exports, type: array<string>, description: "Query parser, search function and route binding." }
+  - { name: searchFields, type: array<string>, description: "Reviewed text/varchar fields." }
+  - { name: indexName, type: string, description: "Declared GIN index name." }
+  - { name: migrationRequired, type: boolean, description: "Always true; source generation does not apply DDL." }
 dependencies:
-  packages: []
+  packages:
+    - { name: pg, version: "8.23.0" }
+    - { name: drizzle-orm, version: "0.45.3" }
+    - { name: express, version: "4.22.3" }
+    - { name: vitest, version: "4.1.11", dev: true }
+    - { name: supertest, version: "7.2.2", dev: true }
   services: []
   templates:
     - { id: database.neon-postgres.connection, relationship: requires }
+    - { id: backend.repository, relationship: requires }
+    - { id: backend.middleware, relationship: requires }
+    - { id: authentication.jwt, relationship: requires }
+    - { id: database.migrations, relationship: extends }
 environment:
   variables: []
 files:
-  create: []
-  modify: []
+  create:
+    - { path: "src/search/{{input.entityNameCamel}}Search.ts", source: files/search.ts.template }
+    - { path: "src/routes/{{input.entityNameCamel}}SearchRoutes.ts", source: files/searchRoutes.ts.template }
+  modify:
+    - { path: src/config/schema.ts, operation: insert-pg-index, tableExportName: "{{input.tableExportName}}" }
+    - { path: src/app.ts, operation: guard-search-query-logging, logger: "morgan('dev')" }
+    - { path: src/app.ts, operation: insert-before-marker, marker: "// Import routes", template: "reviewed search route import" }
+    - { path: src/app.ts, operation: insert-before-marker, marker: "// Routes", template: "reviewed search route mount" }
 compatible_with:
-  upstream: []
-  downstream: []
+  upstream: [database.neon-postgres.connection, backend.repository, backend.middleware, authentication.jwt]
+  downstream: [documentation.api, testing.api]
 consumes:
-  artifacts: []
+  artifacts: [database.schema]
 produces:
-  artifacts: []
+  artifacts: [database.schema]
 idempotency:
   strategy: detect-and-skip
-  detection: "n/a — planned stub, never generated"
+  detection: "Exact generated search source/test and table index callback already exist; divergence requires review."
 validation:
-  checks: []
+  checks:
+    - { type: file-exists, path: "src/search/{{input.entityNameCamel}}Search.ts" }
+    - { type: file-exists, path: "src/routes/{{input.entityNameCamel}}SearchRoutes.ts" }
+    - { type: build, command: "npm run build" }
+    - { type: migration-pending-check, command: "npm --ignore-scripts run dbGenerate", sandbox: docker, description: "Generate and review the new GIN index migration; this node never applies it." }
 testing:
-  strategy: unit
-  location: "n/a"
-  command: "n/a"
+  strategy: integration
+  location: "tests/{{input.entityNameCamel}}Search.test.ts"
+  command: "npm test -- Search"
 security:
   considerations:
-    - "Future implementation must apply the same allowlist discipline as api.crud for any user-facing sortable/rankable field."
+    - "The generated route always mounts the prerequisite authMiddleware before searching; the application must ensure that middleware enforces authentication. Search source only includes AST-verified literal table/column identifiers; query text and bounded page/offset values are pg parameters. Unknown keys, arrays, controls, oversized or deep-page requests fail closed."
+    - "The reviewed Morgan dev logger skips the exact /api/search path and /api/search/ prefix, including denied and unmatched-method requests, without reading originalUrl. The slash delimiter preserves logging for similarly named paths; percent-encoded namespace spellings outside these literals and other application/proxy/access logs or tracing require separate privacy review."
+    - "This node does not infer row-level or tenant authorization from authentication. Do not deploy against sensitive/tenant-scoped tables without separately reviewed row/tenant predicates; the generated search function searches all rows in its declared table."
+    - "The GIN index is a schema declaration, not an applied database migration. Generate, review and apply the migration using the guarded workflow before enabling the route; rendering never performs DDL."
 documentation:
-  required: [template.yaml]
+  required: [README.md]

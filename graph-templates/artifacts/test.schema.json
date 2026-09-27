@@ -24,6 +24,7 @@
             "required": ["nodeId", "kind", "file"],
             "properties": {
               "nodeId": { "type": "string", "description": "The graph node this suite covers" },
+              "instanceId": { "type": "string", "minLength": 1, "description": "Specific architecture invocation covered; required to disambiguate repeated nodeId templates." },
               "kind": { "enum": ["unit", "integration", "api"] },
               "file": { "type": "string" },
               "status": { "enum": ["not-run", "passing", "failing"], "default": "not-run" },

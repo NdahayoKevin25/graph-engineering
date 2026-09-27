@@ -1,5 +1,7 @@
 # frontend.tables
 
+The audited runtime caps page size at 100 and filters at eight, bounds filter values, rejects reserved/prototype keys, aborts stale fetches and validates row/pagination envelopes. Ordinary cells are escaped primitive text, with unsupported nested values handled safely. See [audited frontend runtime](../../../docs/frontend-runtime.md); historical source assets are not the hardened implementation.
+
 **What.** `useQueryTable<T>(basePath, pageSize?)` — fetches one page of a list endpoint, managing `page`/`sortBy`/`sortDir`/`filters` as URL query params in exactly the shape `backend.pagination`'s `parseListQuery` expects. `<DataTable>` is a thin presentational component consuming the hook's result — sortable headers, loading/empty states, prev/next pagination.
 
 **When.** After `frontend.nextjs`. Pairs naturally with any entity `api.crud` generated on the backend (the hook's query-param shape is exactly what `api.crud`'s `findMany` patch reads).
@@ -16,4 +18,4 @@
 
 **Validate.** Both files exist, `useQueryTable` is exported, build passes.
 
-**Security.** Filter/sort keys sent by this hook are NOT validated or allowlisted client-side — `api.crud`'s server-side `filterableFields`/`sortableFields` allowlist is the actual security boundary (see its README's "Security" section). This hook and component only ever *display* what the server chose to return; never derive access-control decisions from anything computed here. Pagination bounds (`meta.totalPages`) always come from the server response, never from a client-side `rows.length` computation, to avoid drifting from the server's actual count under concurrent writes.
+**Security.** Client-side field syntax and resource bounds do not replace `api.crud`'s server-side filter/sort/row authorization. These components only display returned data; hidden UI is not an access-control boundary. Application-specific row schemas and trusted custom cell renderers require review. Pagination metadata is checked for consistency before publication.

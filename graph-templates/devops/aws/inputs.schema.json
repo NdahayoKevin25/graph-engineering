@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "serviceName",
+    "imageUri",
+    "port",
+    "executionRoleArn",
+    "infrastructureRoleArn",
+    "taskRoleArn",
+    "subnetIds",
+    "securityGroupIds",
+    "secrets",
+    "acknowledgeUnverifiedAwsPrerequisites"
+  ],
+  "properties": {
+    "serviceName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "imageUri": {
+      "type": "string",
+      "maxLength": 1024,
+      "pattern": "^[0-9]{12}\\.dkr\\.ecr\\.[a-z]{2}(?:-[a-z0-9]+)+-[0-9]+\\.amazonaws\\.com/(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*@sha256:[a-f0-9]{64}$"
+    },
+    "port": { "type": "integer", "minimum": 1024, "maximum": 65535 },
+    "executionRoleArn": { "$ref": "#/$defs/roleArn" },
+    "infrastructureRoleArn": { "$ref": "#/$defs/roleArn" },
+    "taskRoleArn": { "$ref": "#/$defs/roleArn" },
+    "subnetIds": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^subnet-(?:[0-9a-f]{8}|[0-9a-f]{17})$"
+      }
+    },
+    "securityGroupIds": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^sg-(?:[0-9a-f]{8}|[0-9a-f]{17})$"
+      }
+    },
+    "secrets": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "valueFrom"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$",
+            "not": { "const": "PORT" }
+          },
+          "valueFrom": { "$ref": "#/$defs/secretArn" }
+        }
+      }
+    },
+    "acknowledgeUnverifiedAwsPrerequisites": {
+      "type": "boolean",
+      "const": true
+    }
+  },
+  "$defs": {
+    "roleArn": {
+      "type": "string",
+      "pattern": "^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]{1,512}$"
+    },
+    "secretArn": {
+      "type": "string",
+      "maxLength": 2048,
+      "pattern": "^arn:aws:(?:secretsmanager:[a-z]{2}(?:-[a-z0-9]+)+-[0-9]+:[0-9]{12}:secret:[A-Za-z0-9/_+=.@-]{1,512}|ssm:[a-z]{2}(?:-[a-z0-9]+)+-[0-9]+:[0-9]{12}:parameter/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)$"
+    }
+  }
+}

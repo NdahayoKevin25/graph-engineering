@@ -63,7 +63,9 @@ function main() {
     const compatibleNodes = new Set([
       ...(((doc.compatible_with || {}).upstream) || []),
       ...(((doc.compatible_with || {}).downstream) || []),
-      ...(((doc.dependencies || {}).templates) || []).map((t) => t.id),
+      ...(((doc.dependencies || {}).templates) || [])
+        .filter((t) => t.relationship !== 'conflicts')
+        .map((t) => t.id),
     ]);
 
     templates.push({
@@ -79,8 +81,10 @@ function main() {
       outputs: ((doc.outputs || [])).map((o) => o.name),
       dependsOn: ((doc.dependencies || {}).templates) || [],
       environment: ((doc.environment || {}).variables) || [],
+      testing: doc.testing || { strategy: 'none' },
       compatibleNodes: [...compatibleNodes],
-      path: path.relative(ROOT, path.dirname(file)),
+      // Registry paths are portable identifiers, not host OS paths.
+      path: path.relative(ROOT, path.dirname(file)).split(path.sep).join('/'),
     });
   }
 

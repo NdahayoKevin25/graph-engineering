@@ -4,9 +4,9 @@
   "additionalProperties": false,
   "required": ["projectName"],
   "properties": {
-    "projectName": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-    "description": { "type": "string", "default": "" },
+    "projectName": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "maxLength": 100 },
+    "description": { "type": "string", "default": "", "maxLength": 2000 },
     "port": { "type": "integer", "default": 3000, "minimum": 1, "maximum": 65535 },
-    "corsOrigin": { "type": "string", "default": "http://localhost:3000" }
+    "corsOrigin": { "type": "string", "default": "http://localhost:3000", "maxLength": 4096 }
   }
 }

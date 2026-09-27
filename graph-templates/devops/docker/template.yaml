@@ -2,7 +2,7 @@ id: devops.docker
 name: Docker Build
 version: 1.0.0
 description: >
-  A multi-stage Dockerfile (build stage compiles TypeScript, slim node:alpine
+  A multi-stage Dockerfile (build stage compiles TypeScript, slim Node 24 Debian
   runtime stage ships only dist/ + production node_modules), .dockerignore,
   and a docker-compose.yml for local runs. Targets Neon serverless Postgres
   (no bundled Postgres container) and S3-compatible object storage, matching
@@ -15,11 +15,21 @@ type: graph-node
 actions: [generate, detect, modify, validate]
 
 inputs:
-  - { name: port, type: number, required: false, default: 3000, description: "Must match project.node-express's port input" }
-  - { name: nodeVersion, type: string, required: false, default: "20" }
+  - {
+      name: port,
+      type: number,
+      required: false,
+      default: 3000,
+      description: "Must match project.node-express's port input",
+    }
+  - { name: nodeVersion, type: string, required: false, default: "24" }
 
 outputs:
-  - { name: files, type: array<string>, description: "Dockerfile, .dockerignore, docker-compose.yml" }
+  - {
+      name: files,
+      type: array<string>,
+      description: "Dockerfile, .dockerignore, docker-compose.yml",
+    }
 
 dependencies:
   packages: []
@@ -38,7 +48,8 @@ files:
   modify: []
 
 compatible_with:
-  upstream: [project.node-express, database.neon-postgres.connection, storage.aws-s3]
+  upstream:
+    [project.node-express, database.neon-postgres.connection, storage.aws-s3]
   downstream: [devops.github-actions, devops.deployment]
 
 consumes:
@@ -54,8 +65,10 @@ validation:
   checks:
     - { type: file-exists, path: Dockerfile }
     - { type: file-exists, path: docker-compose.yml }
-    - { type: build, command: "npm run build" }
-    - { type: build, command: "docker build -t app-validate ." }
+    - {
+        type: build,
+        command: "docker build --pull=false --network=none -t app-validate .",
+      }
 
 testing:
   strategy: none
@@ -65,8 +78,9 @@ testing:
 security:
   considerations:
     - "The runtime stage never COPYs .env/.env.local — secrets are injected at run time via docker-compose's env_file or the orchestrator's own secret store, never baked into the image."
-    - "Multi-stage build means TypeScript source, devDependencies, and the build toolchain never reach the runtime image — smaller attack surface and smaller image."
+    - "The default slim runtime receives only production node_modules, package.json and compiled dist. Explicit image overrides must be reviewed separately."
     - "Runtime stage runs as the non-root `node` user (USER node), not root, limiting blast radius if the container is compromised."
+    - "Build context excludes every .env* variant, Git/private graph data, credentials and unlisted paths; npm lifecycle hooks are disabled during install, build and prune."
     - "docker-compose.yml intentionally has no bundled Postgres service — this stack targets Neon serverless, and running a local Postgres container alongside it would silently diverge from production behavior."
 
 documentation:

@@ -1,0 +1,16 @@
+import express from 'express';
+import { authMiddleware } from '../middlewares/authMiddleware';
+import { asyncHandler } from '../middlewares/asyncHandler';
+import { APIError } from '../middlewares/errorMiddleware';
+import { search__ENTITY__, SearchQueryError } from '../search/__CAMEL__Search';
+
+const router = express.Router();
+router.get('/', authMiddleware, asyncHandler(async (req, res) => {
+  try {
+    res.status(200).json(await search__ENTITY__(req.query));
+  } catch (error) {
+    if (error instanceof SearchQueryError) throw new APIError('Invalid search query', 400);
+    throw error;
+  }
+}));
+export const __CAMEL__SearchRoutes = router;

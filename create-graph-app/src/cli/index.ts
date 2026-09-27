@@ -14,7 +14,6 @@ import { CliError, formatCliError } from '../utils/errors';
 import { isTruthyPath } from '../utils/render';
 import { ProjectConfig } from '../types';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJson = require('../../package.json') as { version: string };
 
 const program = new Command();
@@ -134,7 +133,7 @@ function printPostGeneration(config: ProjectConfig, hasEnvVars: boolean): void {
   let n = 2;
   if (hasEnvVars) steps.push(`${n++}. Copy \`.env.example\` to \`.env\` and fill in the values`);
   steps.push(`${n++}. Review \`docs/SETUP.md\``);
-  steps.push(`${n++}. \`npm run dev\``);
+  steps.push(`${n}. \`npm run dev\``);
 
   clack.outro(`Success!\n\nYour project is ready:\n\n  cd ${config.project.name}\n\nNext steps:\n\n${steps.join('\n')}`);
 }

@@ -8,7 +8,7 @@
   "properties": {
     "$schema": { "type": "string" },
     "artifactType": { "const": "architecture" },
-    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "version": { "type": "string", "pattern": "^[12]\\.\\d+\\.\\d+$" },
     "metadata": { "$ref": "requirements.schema.json#/$defs/metadata" },
     "data": {
       "type": "object",
@@ -32,13 +32,15 @@
         },
         "nodes": {
           "type": "array",
-          "description": "The resolved, ordered list of graph node ids this application will execute (see GRAPH-NODE-SPEC.md).",
+          "description": "Ordered invocations. id identifies the registry template; instanceId uniquely identifies one invocation in artifact version 2.",
           "items": {
             "type": "object",
             "additionalProperties": false,
             "required": ["id", "order"],
             "properties": {
               "id": { "type": "string", "description": "Dotted template id, e.g. backend.express.controller" },
+              "instanceId": { "type": "string", "minLength": 1, "description": "Unique invocation identity, e.g. backend.service:Product; singleton invocations conventionally use id." },
+              "bindings": { "type": "object", "additionalProperties": { "type": "string", "minLength": 1 }, "description": "Required or selected extends template id to the chosen upstream instanceId. Required when a dependency template has multiple invocations." },
               "order": { "type": "integer", "minimum": 0 },
               "inputs": { "type": "object" }
             }
@@ -46,7 +48,7 @@
         },
         "edges": {
           "type": "array",
-          "description": "Explicit node-to-node dependency edges beyond template.yaml requires/extends, for graph-specific composition choices.",
+          "description": "Additional dependency edges: from dependent instanceId to prerequisite instanceId. Prerequisites run earlier.",
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -59,5 +61,12 @@
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "version": { "pattern": "^2\\." } } },
+      "then": { "properties": { "data": { "properties": { "nodes": { "items": { "required": ["instanceId"] } } } } } },
+      "else": { "properties": { "data": { "properties": { "nodes": { "items": { "not": { "anyOf": [{ "required": ["instanceId"] }, { "required": ["bindings"] }] } } } } } } }
+    }
+  ]
 }

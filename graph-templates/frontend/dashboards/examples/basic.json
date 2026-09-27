@@ -1,0 +1,7 @@
+{
+  "inputs": {},
+  "expectedOutputs": {
+    "files": ["components/Dashboard.tsx", "tests/Dashboard.test.tsx"],
+    "exports": ["Dashboard", "DashboardNavItem", "DashboardStat", "DashboardTable", "DashboardProps"]
+  }
+}

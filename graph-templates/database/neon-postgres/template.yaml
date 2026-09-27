@@ -2,11 +2,9 @@ id: database.neon-postgres.connection
 name: Neon PostgreSQL Connection (Drizzle)
 version: 1.0.0
 description: >
-  The Neon serverless Postgres connection layer, taken directly from the
-  reference app's src/config/database.ts and drizzle.config.ts: a WebSocket-
-  backed Pool wrapped by drizzle-orm's neon-serverless driver, plus the base
-  (table-free) schema.ts that backend.repository nodes append pgTable
-  definitions to, and drizzle-kit configuration for migrations.
+  A bounded standard PostgreSQL pool for persistent Node24 processes, including
+  Neon, using pg and Drizzle with certificate verification. Includes explicit
+  operation URL guards and credential-free offline migration generation.
 category: database
 subcategory: neon-postgres
 status: implemented
@@ -21,29 +19,29 @@ outputs:
 
 dependencies:
   packages:
-    - { name: "@neondatabase/serverless", version: "^0.9.4" }
-    - { name: drizzle-orm, version: "^0.33.0" }
-    - { name: ws, version: "^8.21.3" }
-    - { name: "@types/ws", version: "^8.18.1", dev: true }
-    - { name: drizzle-kit, version: "^0.24.2", dev: true }
+    - { name: pg, version: "8.23.0" }
+    - { name: drizzle-orm, version: "0.45.3" }
+    - { name: "@types/pg", version: "8.23.1", dev: true }
+    - { name: drizzle-kit, version: "0.31.11", dev: true }
   services: [postgres]
   templates:
     - { id: project.node-express, relationship: requires }
 
 environment:
   variables:
-    - { name: DATABASE_URL, required: true, secret: true, description: "Neon pooled Postgres connection string. Accepts NEON_DATABASE_URL as an alias, matching the reference app's convention.", usedBy: [database.neon-postgres.connection] }
+    - { name: DATABASE_URL, required: true, secret: true, description: "Explicit standard PostgreSQL URL. No alias fallback; TLS certificates are verified for remote targets.", usedBy: [database.neon-postgres.connection] }
 
 files:
   create:
     - { path: src/config/database.ts, source: files/database.ts }
+    - { path: src/config/database-url.ts, source: files/database-url.ts }
     - { path: src/config/schema.ts, source: files/schema.ts }
     - { path: drizzle.config.ts, source: files/drizzle.config.ts }
   modify:
     - { path: src/utils/helpers.ts, operation: insert-before-marker, marker: "// ENV-VAR-FIELDS:", template: "  DATABASE_URL: string;" }
     - { path: src/utils/helpers.ts, operation: insert-into-array, marker: "requiredEnvironmentVariables", template: "'DATABASE_URL'" }
-    - { path: src/utils/helpers.ts, operation: insert-before-marker, marker: "// ENV-VAR-VALUES:", template: "  DATABASE_URL: process.env.NEON_DATABASE_URL ?? process.env.DATABASE_URL!," }
-    - { path: package.json, operation: merge-json, template: "{ \"scripts\": { \"dbGenerate\": \"drizzle-kit generate\", \"dbMigrate\": \"drizzle-kit migrate\" } }" }
+    - { path: src/utils/helpers.ts, operation: insert-before-marker, marker: "// ENV-VAR-VALUES:", template: '  DATABASE_URL: process.env.DATABASE_URL!,' }
+    - { path: package.json, operation: merge-json, template: '{"scripts":{"dbGenerate":"drizzle-kit generate"},"overrides":{"@esbuild-kit/core-utils":{"esbuild":"0.25.12"}}}' }
 
 compatible_with:
   upstream: [project.node-express]
@@ -64,7 +62,7 @@ validation:
     - { type: file-exists, path: src/config/schema.ts }
     - { type: file-exists, path: drizzle.config.ts }
     - { type: exports, path: src/config/database.ts, names: [database, pool] }
-    - { type: build, command: "npm run build" }
+    - { type: build, command: "npm --ignore-scripts run build", sandbox: docker }
 
 testing:
   strategy: unit
@@ -74,7 +72,8 @@ testing:
 security:
   considerations:
     - "DATABASE_URL is a secret — never logged, never committed; only referenced via SECRETS which reads it from process.env."
-    - "neonConfig.webSocketConstructor = ws is required because @neondatabase/serverless assumes a WebSocket global that only exists natively in edge/browser runtimes, not plain Node — omitting it breaks the Pool in this stack."
+    - "Uses standard pg/TLS transport for Node24, not the Neon WebSocket/edge driver. Remote TLS requires certificate verification; URL flags cannot weaken it."
+    - "Unencrypted numeric loopback is permitted only with NODE_ENV development/test and GRAPH_DATABASE_ALLOW_LOCAL=1. Rendering never connects or installs packages."
     - "The Pool is a module-level singleton (one per process) — never construct a second Pool for the same DATABASE_URL, which would exhaust Neon's connection limits under load."
 
 documentation:

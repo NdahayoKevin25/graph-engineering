@@ -1,5 +1,5 @@
 import * as path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execNpmSync } from '../utils/npm';
 import { Registry } from '../registry/registry';
 import { resolve } from '../resolver/dependency-resolver';
 import {
@@ -127,7 +127,7 @@ export function generate(
   if (options.installDependencies && !options.dryRun) {
     onProgress({ label: 'Installing dependencies' });
     for (const root of new Set(Object.values(layout.roots).concat(options.targetDir))) {
-      execFileSync('npm', ['install'], { cwd: root, stdio: 'ignore' });
+      execNpmSync(['install'], { cwd: root, stdio: 'ignore' });
     }
   }
 

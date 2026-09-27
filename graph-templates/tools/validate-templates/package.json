@@ -4,7 +4,7 @@
   "description": "Validates every graph-templates/**/template.yaml against TEMPLATE-SPEC.md — used by CONTRIBUTING.md step 11 and CI.",
   "main": "index.js",
   "bin": { "validate-templates": "./index.js" },
-  "scripts": { "start": "node index.js" },
+  "scripts": { "start": "node index.js ../..", "test": "node --test index.test.js" },
   "dependencies": {
     "js-yaml": "^4.1.0"
   },

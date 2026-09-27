@@ -1,19 +1,37 @@
 # database.seed
 
-**What.** `src/scripts/seed.ts` — a standalone script (never imported by `app.ts`) that inserts fixture rows for one or more entities, run via `npm run seed`. Refuses to run when `SECRETS.NODE_ENV === 'production'`.
+Generates a standalone compiled seed runner and package script. It does not
+connect, build, install packages or insert data during rendering.
 
-**When.** After `database.neon-postgres.connection` and the `backend.repository` node(s) for whichever entities you want fixture data for.
+Input entities contain entityName, tableExportName and sampleRows. Values must
+be plain JSON: no functions, expressions, prototypes, secret-shaped strings or
+executable identifiers. Limits: 20 entities, 100 rows/entity, 50 properties per
+object, 100 items/JSON array, 2,048 characters/string, 64 KiB total and ten total
+nesting levels including metadata. Identifiers must match literal exported
+pgTable definitions; unknown fields, omitted required fields, duplicate rows
+and unsupported column/value types fail closed. Generated timestamps should
+be omitted. JSON is serialized as data, never evaluated.
 
-**Requires.** `database.neon-postgres.connection`. Extends (soft) `backend.repository` — it imports whatever `pgTable`s already exist in `schema.ts`; it does not create entities itself.
+Exact repeats are generation no-ops. New entities may be added to an unchanged,
+renderer-owned seed file. Existing entities with differing rows, edited source,
+duplicate table mappings or conflicting package scripts require reconciliation;
+nothing is silently overwritten. Sample data must be invented fixtures, not PII.
 
-**Configure via.** `entities`: `[{ entityName, tableExportName, sampleRows }]` — reusable across any entity, not tied to one.
+Execution requires all of:
 
-**Produces.** `src/scripts/seed.ts`; adds a `"seed": "ts-node ./src/scripts/seed.ts"` script to `package.json`.
+- SEED_DATABASE_URL; DATABASE_URL is never a fallback.
+- Numeric loopback host 127.0.0.1 or ::1; remote seeds are intentionally unsupported.
+- A database name ending _test, _seed or _dev and an exact
+  GRAPH_DATABASE_EXPECTED_NAME match.
+- NODE_ENV=development/test and GRAPH_DATABASE_SEED=isolated-seed-database.
+- GRAPH_DATABASE_ALLOW_LOCAL=1 if the isolated server uses plaintext.
 
-**Connects to.** Downstream: `testing.integration` (a common pattern is running `npm run seed` before integration tests that need non-empty tables).
+Name/environment declarations cannot prove that a database is disposable:
+the operator must provision a dedicated isolated database and review the target.
+Compile in an approved sandbox, then npm --ignore-scripts run seed.
 
-**Validate.** File exists, build passes, and — non-negotiably — the file must still contain the `NODE_ENV` production guard (checked by a `content-contains` rule so this can never be silently stripped).
-
-**Modification.** Adding another entity's seed data re-runs `generate` in `modify` mode: it appends one new `await database.insert(...)` block and one new import, rather than rewriting the file (which would drop any hand-added seed logic for entities not tracked by this node's own `entities` input).
-
-**Security.** The production guard is the whole point of this node — seeding is destructive/non-idempotent by nature (re-running it typically re-inserts duplicate rows, since it doesn't upsert), and running it against a live `DATABASE_URL` is a real incident, not a theoretical one. Never remove the guard, and never pass real user data as `sampleRows`.
+All entities insert in one transaction under an advisory lock and table locks.
+Nonempty tables are refused, including a previously successful seed; there is
+no implicit upsert, truncation, overwrite or duplicate rerun. If a later entity
+fails, earlier inserts roll back. Logs omit fixture rows, SQL and raw errors.
+Offline PostgreSQL evidence is documented in docs/database-runtime.md.

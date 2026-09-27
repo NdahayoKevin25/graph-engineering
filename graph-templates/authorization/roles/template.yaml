@@ -1,56 +1,98 @@
 id: authorization.roles
 name: Dynamic Role Definitions
-version: 0.1.0
+version: 1.0.0
 description: >
-  Application-defined, runtime-configurable roles (a roles table + role
-  assignment) as opposed to authorization.rbac's hardcoded customer/admin
-  enum — for applications that need to let an admin create new roles without
-  a code change/migration. Not yet implemented in this library.
+  Application-defined, runtime-configurable roles: roles, user_roles,
+  role_permissions and an append-only role_audit_log table, a repository and
+  service, admin-only management routes (create, rename and delete roles,
+  assign and revoke them, grant and revoke resource:action permissions, read
+  the audit log) and requireAssignedRole/requireAssignedPermission
+  middleware that read the caller's current roles from the database on every
+  request. Unlike authorization.rbac's fixed customer/admin enum (and its
+  requireRole, which reads users.role), an administrator can add roles without
+  a code change. The JWT role claim is never used for these decisions.
 category: authorization
 subcategory: roles
-status: planned
+status: implemented
 type: graph-node
-actions: [generate]
+actions: [generate, detect, validate, test]
 
 inputs: []
-outputs: []
+outputs:
+  - { name: files, type: array<string>, description: "Role name rules, repository, service, middleware, admin routes, the schema append, the app.ts mount and generated tests." }
+  - { name: exports, type: array<string>, description: "requireAssignedRole, requireAssignedPermission, roleRoutes, roleRepository, rolesForUser, hasPermission, ensureBuiltInRoles, bootstrapInitialAdmin, assertNotLastActiveAdmin, recordRoleAuditAttempt, listRoleAudit and the table exports, including roleAuditLogTable." }
+  - { name: routes, type: array<string>, description: "Admin-only management routes under /api/roles, including GET /api/roles/audit with limit, before-cursor, outcome and action parameters." }
 
 dependencies:
-  packages: []
+  packages:
+    - { name: express, version: "^4.22.3" }
+    - { name: drizzle-orm, version: "0.45.3" }
+    - { name: zod, version: "^3.25.76" }
+    - { name: supertest, version: "7.2.2", dev: true }
+    - { name: vitest, version: "4.1.11", dev: true }
   services: []
   templates:
-    - { id: authorization.rbac, relationship: extends }
+    - { id: authentication.jwt, relationship: requires }
+    - { id: authentication.password, relationship: requires }
     - { id: database.neon-postgres.connection, relationship: requires }
+    - { id: backend.error-handler, relationship: requires }
+    - { id: backend.middleware, relationship: requires }
+    - { id: database.migrations, relationship: recommends }
 
 environment:
   variables: []
 
 files:
-  create: []
-  modify: []
+  create:
+    - { path: src/utils/roleNames.ts, source: files/roleNames.ts }
+    - { path: src/repository/Roles.ts, source: files/Roles.ts }
+    - { path: src/services/roleService.ts, source: files/roleService.ts }
+    - { path: src/middlewares/roleMiddleware.ts, source: files/roleMiddleware.ts }
+    - { path: src/routes/roleRoutes.ts, source: files/roleRoutes.ts }
+  modify:
+    - { path: src/config/schema.ts, operation: append, source: files/schema.fragment.ts }
+    - { path: src/app.ts, operation: insert-before-marker, marker: "// Import routes", template: "import { roleRoutes } from './routes/roleRoutes';" }
+    - { path: src/app.ts, operation: insert-before-marker, marker: "// Health check route", template: "app.use('/api/roles', roleRoutes);" }
 
 compatible_with:
-  upstream: [authentication.jwt, database.neon-postgres.connection]
-  downstream: []
+  upstream: [authentication.jwt, authentication.password, database.neon-postgres.connection, backend.error-handler, backend.middleware]
+  downstream: [authorization.permissions, backend.express, api.crud, database.migrations]
 
 consumes:
-  artifacts: []
+  artifacts: [auth.schema, database.schema]
 produces:
-  artifacts: [auth.schema]
+  artifacts: [auth.schema, database.schema]
 
 idempotency:
   strategy: detect-and-skip
-  detection: "not applicable — planned"
+  detection: "Identical generated files, schema append and route mount already exist; divergent files require review."
 
 validation:
-  checks: []
+  checks:
+    - { type: file-exists, path: src/middlewares/roleMiddleware.ts }
+    - { type: exports, path: src/middlewares/roleMiddleware.ts, names: [requireAssignedRole, requireAssignedPermission] }
+    - { type: exports, path: src/routes/roleRoutes.ts, names: [roleRoutes] }
+    - { type: exports, path: src/services/roleService.ts, names: [recordRoleAuditAttempt, listRoleAudit] }
+    - { type: build, command: "npm run build" }
 
 testing:
-  strategy: none
+  strategy: unit
+  location: tests/roleMiddleware.test.ts
+  command: "npm test -- roleMiddleware roleService roleRoutes roleRepository"
 
 security:
   considerations:
-    - "Runtime-defined roles widen the attack surface versus a fixed enum — role creation/assignment endpoints must themselves be tightly permissioned once implemented (a privilege-escalation risk if under-protected)."
+    - "Deny by default: a user with no roles, a route naming a role nobody holds, a malformed identity or an unknown permission is refused. Lookup failures return a generic 503."
+    - "Authorization is decided per request from the user_roles table. The JWT role claim, req.user.role, headers and bodies are never trusted, so a role change takes effect on the next request with no token staleness."
+    - "The whole /api/roles router runs authMiddleware and a database-backed requireAssignedRole('admin') before parsing parameters, so non-administrators get one identical 403 whatever role they name. The service re-checks the actor's admin role inside the locked transaction."
+    - "All role mutations take one transaction-scoped advisory lock. Revoking admin is refused unless another ACTIVE administrator remains (users.status 'active' with a verified email); suspended or deleted holders don't count. Built-in roles cannot be renamed, deleted or shadowed (checked in the service and in SQL)."
+    - "This node does not own user suspension or deletion. Code that suspends or deletes users must call assertNotLastActiveAdmin inside its transaction; bootstrapInitialAdmin recovers only when no active administrator exists."
+    - "Role names match ^[a-z][a-z0-9_-]{1,31}$; permissions use authorization.permissions' resource:action pattern. Role and grant counts are bounded. Every query is built by Drizzle with bound parameters."
+    - "The first administrator is granted only by bootstrapInitialAdmin from a reviewed operator step; it refuses while any active administrator exists. No HTTP route can create an administrator without an existing one."
+    - "Every role-management attempt is logged as one structured console record with action, actor id and outcome: successes, gate denials, unauthenticated calls, failed operations and bootstrap attempts. Tokens, headers and bodies are never logged."
+    - "Every change, and every refused or failed attempt by an authenticated caller, is also stored in the append-only role_audit_log table (id, occurred_at, actor_id, action, target, detail, outcome, status): a closed action vocabulary and names or ids matching the strict patterns only, never bodies, headers, tokens or free text. detail records what changed: the role assigned or revoked, the permission granted or revoked, or a rename's new name. A success row is written inside the change's transaction, so a rolled-back change leaves none and a change whose row cannot be written is not committed. Refused, failed and bootstrap attempts are written outside the failed transaction; if that write fails it is logged and the original response stands. The repository offers insert and select only; database-level REVOKE UPDATE, DELETE is an operator step."
+    - "Anonymous traffic cannot flood the log: requests refused before or by authMiddleware (credentials, Origin, CSRF) and every 401 are console-only. Denials of authenticated callers are stored at most once per actor and action per minute by a bounded in-process limiter (per instance)."
+    - "GET /api/roles/audit sits behind the same admin gate, returns newest rows first, bounds ?limit to 1..200 (default 50) and accepts a ?before row-id cursor and ?outcome and ?action filters from the closed lists; unknown or repeated parameters are refused. Every query is a parameterized Drizzle query."
 
 documentation:
-  required: []
+  required: [README.md]

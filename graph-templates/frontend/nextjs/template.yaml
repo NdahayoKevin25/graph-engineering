@@ -18,7 +18,11 @@ inputs: []
 
 outputs:
   - { name: files, type: array<string>, description: "lib/apiClient.ts" }
-  - { name: exports, type: array<string>, description: "apiFetch, ApiError, ApiSuccess, ApiPaginated" }
+  - {
+      name: exports,
+      type: array<string>,
+      description: "apiFetch, ApiError, ApiSuccess, ApiPaginated",
+    }
 
 dependencies:
   packages: []
@@ -36,7 +40,13 @@ files:
 
 compatible_with:
   upstream: [project.nextjs]
-  downstream: [frontend.authentication, frontend.tables, frontend.forms, frontend.dashboards]
+  downstream:
+    [
+      frontend.authentication,
+      frontend.tables,
+      frontend.forms,
+      frontend.dashboards,
+    ]
 
 consumes:
   artifacts: [api.schema]
@@ -60,9 +70,9 @@ testing:
 
 security:
   considerations:
-    - "credentials: 'include' is set unconditionally — never add an option to disable it for an authenticated call, and never fall back to reading a token out of localStorage/document.cookie if a request 401s. A 401 means \"not logged in,\" full stop; the caller (frontend.authentication's useAuth) is what redirects to /login."
-    - "apiFetch never logs the raw response body of a non-2xx result beyond the parsed { message, status } — the backend's own errorHandler already decides what's safe to expose; the client shouldn't try to extract more from a response that wasn't meant to have more."
-    - "This client makes same-origin-looking calls to a different origin (NEXT_PUBLIC_API_URL). If the browser blocks the cookie due to CORS/SameSite misconfiguration, apiFetch will surface it as an ordinary 401, not a distinguishable network error — see project.nextjs's README for the CORS_ORIGIN/sameSite requirements this depends on."
+    - 'credentials: ''include'' is set unconditionally — never add an option to disable it for an authenticated call, and never fall back to reading a token out of localStorage/document.cookie if a request 401s. A 401 means "not logged in," full stop; the caller (frontend.authentication''s useAuth) is what redirects to /login.'
+    - "The audited client does not expose raw response errors. It uses constant messages and actual HTTP status, bounded JSON response streams, fixed included credentials, no redirects and no arbitrary caller headers."
+    - "CORS/network failures have status 0; actual HTTP401 remains distinct. Same-site deployment and explicit credentialed CORS/trusted-Origin approval are required by the backend's SameSite=Strict cookie contract."
 
 documentation:
   required: [README.md]

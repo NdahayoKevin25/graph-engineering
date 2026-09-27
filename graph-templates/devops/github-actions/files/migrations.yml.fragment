@@ -1,0 +1,30 @@
+
+  # Manual request AND trusted selected branch AND successful checks are required.
+  # This environment reference does NOT configure or prove required reviewer protection.
+  migrate-database:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_migrations == true && github.ref == 'refs/heads/{{input.mainBranch}}'
+    needs: build-and-test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: "{{input.migrationEnvironment}}"
+    concurrency:
+      group: migrations-${{ github.repository }}-{{input.migrationEnvironment}}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "{{input.nodeVersion}}"
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm --ignore-scripts run build
+      - run: npm --ignore-scripts run dbMigrate
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GRAPH_DATABASE_EXPECTED_NAME: ${{ inputs.expected_database_name }}
+          GRAPH_DATABASE_MIGRATE: reviewed-migration
+          NODE_ENV: production

@@ -1,5 +1,12 @@
 # authorization.tenant-isolation
 
+The engine now provides an audited deterministic Tenant isolation renderer. Its
+credential, identity, cookie, concurrency and authorization contract is documented
+in [the executable authentication guide](../../../docs/authentication-runtime.md).
+That runtime emits reviewed source and tests; it does not execute the historical
+prompt/asset snippets below, configure secrets, deliver email, or authorize a
+deployment automatically. Existing custom code requires explicit reconciliation.
+
 **What.** `requireTenant` — middleware reading a `tenantId` claim off the authenticated user, attaching `req.tenantId`, 401-ing if absent. `withTenantScope(baseCondition, table, tenantId)` — a composable Drizzle helper (`and(baseCondition, eq(table.tenantId, tenantId))`) a repository method calls to scope its query.
 
 **When.** After `authentication.jwt`. Used by any multi-tenant application's `backend.repository`/`api.crud` generation and route middleware chains.

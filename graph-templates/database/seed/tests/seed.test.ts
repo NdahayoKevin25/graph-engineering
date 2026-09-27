@@ -1,12 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { readFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { operationDatabaseOptions } from '../../../../src/config/database-url';
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe('database.seed', () => {
-  it('generated seed.ts refuses to run in production', () => {
-    const path = resolve(__dirname, '../../../../src/scripts/seed.ts');
-    if (!existsSync(path)) return; // template repo itself has no generated project
-    const contents = readFileSync(path, 'utf-8');
-    expect(contents).toMatch(/NODE_ENV.*production/s);
+  it('refuses production and never falls back to the application URL', () => {
+    vi.stubEnv('NODE_ENV','production');
+    vi.stubEnv('DATABASE_URL','postgresql://fixture@127.0.0.1/fixture_test');
+    vi.stubEnv('SEED_DATABASE_URL','');
+    expect(() => operationDatabaseOptions('seed')).toThrow();
   });
 });

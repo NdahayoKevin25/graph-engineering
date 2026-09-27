@@ -1,21 +1,23 @@
 id: frontend.dashboards
-name: Dashboard Layout
-version: 0.1.0
+name: Dashboard Composition
+version: 1.0.0
 description: >
-  Planned. A dashboard shell (sidebar nav gated by useAuth's user.role, stat
-  tiles, a page layout composing frontend.tables' DataTable + frontend.forms'
-  useFormState for settings/profile forms) — the natural next composition once
-  frontend.authentication + frontend.tables + frontend.forms exist individually.
-  Not yet implemented: it's a composition of already-implemented pieces rather
-  than new primitives, so it's lower priority than the pieces it would compose.
+  A reusable authenticated dashboard composition: display-only role-filtered
+  navigation, caller-supplied stat tiles, an optional table built on
+  frontend.tables, and an optional profile form built on frontend.forms.
+  Applications supply their own reviewed table path, rows, statistics and
+  profile-save callback. No stats or profile endpoint is assumed or created.
 category: frontend
 subcategory: dashboards
-status: planned
+status: implemented
 type: graph-node
-actions: [generate]
+actions: [generate, detect, validate, test]
 
 inputs: []
-outputs: []
+
+outputs:
+  - { name: files, type: array<string>, description: "components/Dashboard.tsx and its test" }
+  - { name: exports, type: array<string>, description: "Dashboard and typed prop contracts" }
 
 dependencies:
   packages: []
@@ -29,7 +31,8 @@ environment:
   variables: []
 
 files:
-  create: []
+  create:
+    - { path: components/Dashboard.tsx, source: files/Dashboard.tsx }
   modify: []
 
 compatible_with:
@@ -43,19 +46,24 @@ produces:
 
 idempotency:
   strategy: detect-and-skip
-  detection: "n/a — planned"
+  detection: "components/Dashboard.tsx exists with exact reviewed content"
 
 validation:
-  checks: []
+  checks:
+    - { type: file-exists, path: components/Dashboard.tsx }
+    - { type: exports, path: components/Dashboard.tsx, names: [Dashboard] }
+    - { type: build, command: "npm run build" }
 
 testing:
-  strategy: none
-  location: ""
-  command: ""
+  strategy: unit
+  location: tests/Dashboard.test.tsx
+  command: "npm test -- Dashboard"
 
 security:
   considerations:
-    - "Once implemented: role-gated nav items are a display convenience only, same caveat as frontend.authentication's README — the backend's authorization.rbac is the actual enforcement, never this layout."
+    - "Role-filtered navigation only changes display; backend authentication, row scope and authorization remain mandatory."
+    - "No stats or profile API is generated. A caller-provided profile-save callback and table path require application review."
+    - "The table child does not mount before the auth context reports an authenticated user; the backend must still enforce access."
 
 documentation:
-  required: []
+  required: [README.md]

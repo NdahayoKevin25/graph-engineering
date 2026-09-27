@@ -1,47 +1,60 @@
-import { neonConfig, Pool } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
-import ws from 'ws';
 
-neonConfig.webSocketConstructor = ws;
-
-let cachedDatabase: ReturnType<typeof drizzle> | undefined;
-
-export function getTestDatabase() {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(
-      'Refusing to create a test database connection when NODE_ENV=production. ' +
-      'testing.integration is destructive (truncateAllTables) and must never run against production.',
-    );
-  }
-
-  if (!cachedDatabase) {
-    const connectionString = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
-    if (!connectionString) {
-      throw new Error('Set TEST_DATABASE_URL (or DATABASE_URL) before running integration tests.');
-    }
-    if (!process.env.TEST_DATABASE_URL) {
-      console.warn(
-        'TEST_DATABASE_URL is not set — integration tests are falling back to DATABASE_URL. ' +
-        'This will TRUNCATE every table in that database between tests. Set TEST_DATABASE_URL ' +
-        'to a disposable database to avoid this warning and the associated risk.',
-      );
-    }
-    cachedDatabase = drizzle(new Pool({ connectionString }));
-  }
-
-  return cachedDatabase;
+let cached: { url: string; pool: Pool; database: ReturnType<typeof drizzle> } | undefined;
+function parseTarget(value: string): URL {
+  let url: URL;
+  try { url = new URL(value); } catch { throw new Error('Invalid PostgreSQL connection URL (value redacted).'); }
+  if (!['postgres:', 'postgresql:'].includes(url.protocol) || !url.hostname || url.hash ||
+      url.hostname.includes('%') || [...url.searchParams.keys()].some(key => key !== 'sslmode') ||
+      url.searchParams.getAll('sslmode').length > 1)
+    throw new Error('PostgreSQL URL routing overrides, certificate paths and ambiguous targets are forbidden.');
+  url.hostname = url.hostname.toLowerCase().replace(/\.$/, '');
+  url.port ||= '5432';
+  return url;
 }
-
-// Table names are read at call time from the schema module the target project
-// generates (database.neon-postgres.connection + backend.repository entries),
-// not hard-coded here — a generated project passes its own table list.
+function testUrl(): string {
+  if (process.env.NODE_ENV !== 'test') throw new Error('A test database requires NODE_ENV=test; production connections are forbidden.');
+  const value = process.env.TEST_DATABASE_URL;
+  if (!value) throw new Error('Set an explicit TEST_DATABASE_URL; DATABASE_URL is never a fallback.');
+  const url = parseTarget(value);
+  const databaseName = decodeURIComponent(url.pathname.slice(1));
+  if (!/^[a-z][a-z0-9_]{0,57}_test$/.test(databaseName))
+    throw new Error('TEST_DATABASE_URL must name a dedicated PostgreSQL database ending in _test.');
+  const sslmode = url.searchParams.get('sslmode');
+  if (sslmode && !['disable', 'verify-full'].includes(sslmode))
+    throw new Error('Test URL sslmode must be disable for isolated local databases or verify-full for TLS.');
+  if (process.env.DATABASE_URL) {
+    const application = parseTarget(process.env.DATABASE_URL);
+    if (application.hostname === url.hostname && application.port === url.port &&
+        decodeURIComponent(application.pathname.slice(1)) === databaseName)
+      throw new Error('TEST_DATABASE_URL must differ from the application DATABASE_URL target, not only its credentials.');
+  }
+  return url.href;
+}
+export function getTestDatabase() {
+  const url = testUrl();
+  if (cached && cached.url !== url) throw new Error('Close the existing test database before changing its URL.');
+  if (!cached) {
+    const pool = new Pool({ connectionString: url, user: decodeURIComponent(new URL(url).username) || 'postgres', max: 2, connectionTimeoutMillis: 5000, idleTimeoutMillis: 1000, application_name: 'graph-engineering-tests' });
+    cached = { url, pool, database: drizzle(pool) };
+  }
+  return cached.database;
+}
+export async function closeTestDatabase(): Promise<void> {
+  const previous = cached; cached = undefined;
+  await previous?.pool.end();
+}
+/** Only explicitly listed public-schema tables; never CASCADE into unlisted data. */
 export async function truncateAllTables(tableNames: string[]): Promise<void> {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Refusing to truncate tables when NODE_ENV=production.');
-  }
-  const database = getTestDatabase();
-  for (const table of tableNames) {
-    await database.execute(sql.raw(`TRUNCATE TABLE "${table}" CASCADE`));
-  }
+  testUrl();
+  if (process.env.GRAPH_TEST_DATABASE_ALLOW_TRUNCATE !== '1')
+    throw new Error('Destructive test cleanup requires GRAPH_TEST_DATABASE_ALLOW_TRUNCATE=1.');
+  if (!Array.isArray(tableNames) || tableNames.length > 1000 || new Set(tableNames).size !== tableNames.length ||
+      tableNames.some(name => typeof name !== 'string' || !/^[a-z][a-z0-9_]{0,62}$/.test(name)))
+    throw new Error('Test cleanup requires a bounded list of distinct table identifiers.');
+  if (!tableNames.length) return;
+  const tables = tableNames.map(name => sql.join([sql.identifier('public'), sql.identifier(name)], sql.raw('.')));
+  await getTestDatabase().execute(sql.join([sql.raw('TRUNCATE TABLE '), sql.join(tables, sql.raw(', ')), sql.raw(' RESTART IDENTITY')]));
 }

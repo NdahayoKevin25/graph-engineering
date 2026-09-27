@@ -1,0 +1,1 @@
+This node declares no `modify` action. Do not rewrite an existing custom Dockerfile, CI workflow, public plan, or private ECS request. Obtain a separate reviewed migration plan for divergent app-owned files.

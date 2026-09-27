@@ -1,1 +1,1 @@
-Create `src/migrations/.gitkeep` and `src/migrations/README.md` verbatim from `files/`. No npm scripts to add — `database.neon-postgres.connection` already added `dbGenerate`/`dbMigrate`.
+Propose the reviewed migration runner, directory documentation and dbMigrate script. Require the generated operation URL guard and provisioned pinned dependencies. Do not execute dbGenerate, dbMigrate, builds or database connections on the host.

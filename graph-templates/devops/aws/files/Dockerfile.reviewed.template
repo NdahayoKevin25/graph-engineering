@@ -1,0 +1,27 @@
+# Graph Engineering generated: devops.docker
+# Override only with explicitly reviewed, preprovisioned Node 24 images.
+ARG NODE_BUILD_IMAGE=node:{{input.nodeVersion}}-bookworm-slim
+ARG NODE_RUNTIME_IMAGE=node:{{input.nodeVersion}}-bookworm-slim
+
+FROM ${NODE_BUILD_IMAGE} AS build
+ARG NPM_CONFIG_OFFLINE=false
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm --ignore-scripts run build
+
+FROM build AS production-dependencies
+RUN npm prune --omit=dev --ignore-scripts --no-audit --no-fund
+
+FROM ${NODE_RUNTIME_IMAGE} AS runtime
+ENV NODE_ENV=production
+ENV PORT={{input.port}}
+WORKDIR /app
+COPY --from=production-dependencies --chown=node:node /app/package.json ./
+COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+USER node
+EXPOSE {{input.port}}
+CMD ["node", "dist/app.js"]

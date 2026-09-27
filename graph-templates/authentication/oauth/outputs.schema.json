@@ -1,0 +1,1 @@
+{ "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "required": ["files", "exports", "routes"], "properties": { "files": { "type": "array", "items": { "type": "string" } }, "exports": { "type": "array", "items": { "type": "string" } }, "routes": { "type": "array", "items": { "type": "string" } } } }

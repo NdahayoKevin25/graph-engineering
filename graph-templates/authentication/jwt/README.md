@@ -1,5 +1,12 @@
 # authentication.jwt
 
+The engine now provides an audited deterministic JWT renderer. Its
+credential, identity, cookie, concurrency and authorization contract is documented
+in [the executable authentication guide](../../../docs/authentication-runtime.md).
+That runtime emits reviewed source and tests; it does not execute the historical
+prompt/asset snippets below, configure secrets, deliver email, or authorize a
+deployment automatically. Existing custom code requires explicit reconciliation.
+
 **What.** `generateAccessToken`/`generateRefreshToken`/`hashToken` (`src/utils/tokens.ts`), `authMiddleware` (`src/middlewares/authMiddleware.ts`), and `POST /api/auth/refresh` (`src/routes/authRefreshRoutes.ts`, mounted at `/api/auth`). Access tokens are short-lived, stateless JWTs (`{ sub, role, type: 'access' }`). Refresh tokens are **not** JWTs — they're opaque random values (`crypto.randomBytes(32)`), only their SHA-256 hash persisted in a new `refresh_tokens` table, the same hash-once idiom the reference app already uses for its `auth_tokens` (email verification / password reset) table.
 
 **When.** After `database.neon-postgres.connection` (owns `schema.ts`, which this node appends `refreshTokenTable` to), `backend.error-handler`, `backend.middleware`. Before `authentication.password` (calls `generateAccessToken`/`generateRefreshToken` and persists the refresh token on login) and `authorization.rbac`/`authorization.tenant-isolation` (read `req.user`).

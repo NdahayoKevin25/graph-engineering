@@ -1,0 +1,27 @@
+{
+  "inputs": {
+    "idleTimeout": "30m",
+    "absoluteTimeout": "12h"
+  },
+  "expectedOutputs": {
+    "files": [
+      "src/sessions/sessionStore.ts",
+      "src/sessions/postgresSessionStore.ts",
+      "src/sessions/session.ts",
+      "src/routes/sessionRoutes.ts",
+      "src/config/schema.ts",
+      "src/utils/helpers.ts",
+      "src/app.ts",
+      "src/repository/Authentication.ts",
+      "src/services/authenticationService.ts",
+      "tests/authenticationSession.test.ts"
+    ],
+    "routes": [
+      "POST /api/session/login",
+      "GET /api/session/me",
+      "GET /api/session/csrf",
+      "POST /api/session/logout",
+      "POST /api/session/logout-all"
+    ]
+  }
+}

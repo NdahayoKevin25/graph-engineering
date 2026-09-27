@@ -3,7 +3,12 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "port": { "type": "integer", "default": 3000 },
-    "nodeVersion": { "type": "string", "default": "20" }
+    "port": {
+      "type": "integer",
+      "minimum": 1024,
+      "maximum": 65535,
+      "default": 3000
+    },
+    "nodeVersion": { "type": "string", "const": "24", "default": "24" }
   }
 }

@@ -1,0 +1,354 @@
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { NextFunction, Request, Response } from 'express';
+import { SECRETS } from '../utils/helpers';
+import { APIError } from '../middlewares/errorMiddleware';
+import { resolveAuthenticationIdentity } from '../services/authIdentity';
+import {
+  createMemorySessionStore,
+  parseSessionStoreKind,
+  SessionStore,
+  SessionStoreKind,
+} from './sessionStore';
+import { PostgresSessionStore } from './postgresSessionStore';
+
+export const DEFAULT_IDLE_TIMEOUT_SECONDS = {{input.idleTimeoutSeconds}};
+export const DEFAULT_ABSOLUTE_TIMEOUT_SECONDS = {{input.absoluteTimeoutSeconds}};
+
+export interface SessionConfiguration {
+  secret: string;
+  idleTimeoutMs: number;
+  absoluteTimeoutMs: number;
+  secureCookie: boolean;
+  cookieName: string;
+  store: SessionStoreKind;
+}
+
+function boundedSeconds(value: string | undefined, fallback: number, min: number, max: number, name: string): number {
+  if (value === undefined || value === '') return fallback;
+  const seconds = /^[1-9][0-9]{0,7}$/.test(value) ? Number(value) : NaN;
+  if (!Number.isSafeInteger(seconds) || seconds < min || seconds > max)
+    throw new Error(`${name} must be an integer number of seconds from ${min} through ${max}`);
+  return seconds;
+}
+
+/** Validates session configuration. There is deliberately no default secret. */
+export function loadSessionConfiguration(env: Record<string, string | undefined>): SessionConfiguration {
+  const secret = env.SESSION_SECRET;
+  if (typeof secret !== 'string' || Buffer.byteLength(secret) < 32 || Buffer.byteLength(secret) > 4096 || new Set(secret).size < 12)
+    throw new Error('Configure a cryptographically random SESSION_SECRET of at least 32 bytes');
+  for (const name of ['ACCESS_TOKEN_SECRET', 'REFRESH_TOKEN_SECRET'])
+    if (env[name] !== undefined && env[name] === secret)
+      throw new Error(`SESSION_SECRET must be independent of ${name}`);
+  const production = env.NODE_ENV === 'production';
+  const idle = boundedSeconds(env.SESSION_IDLE_TIMEOUT_SECONDS, DEFAULT_IDLE_TIMEOUT_SECONDS, 60, 86_400, 'SESSION_IDLE_TIMEOUT_SECONDS');
+  const absolute = boundedSeconds(env.SESSION_ABSOLUTE_TIMEOUT_SECONDS, DEFAULT_ABSOLUTE_TIMEOUT_SECONDS, 3_600, 2_592_000, 'SESSION_ABSOLUTE_TIMEOUT_SECONDS');
+  if (idle > absolute) throw new Error('SESSION_IDLE_TIMEOUT_SECONDS must not exceed SESSION_ABSOLUTE_TIMEOUT_SECONDS');
+  const secureSetting = env.SESSION_COOKIE_SECURE;
+  if (secureSetting !== undefined && secureSetting !== '' && secureSetting !== 'true' && secureSetting !== 'false')
+    throw new Error('SESSION_COOKIE_SECURE must be true or false');
+  // Secure is on unless explicitly disabled for local HTTP development; production cannot disable it.
+  if (secureSetting === 'false' && production)
+    throw new Error('SESSION_COOKIE_SECURE=false is only allowed for local HTTP development, never when NODE_ENV=production');
+  const secureCookie = secureSetting !== 'false';
+  return {
+    secret,
+    idleTimeoutMs: idle * 1000,
+    absoluteTimeoutMs: absolute * 1000,
+    secureCookie,
+    // The __Host- prefix makes browsers reject the cookie unless it is Secure, host-only and Path=/.
+    cookieName: secureCookie ? '__Host-sid' : 'sid',
+    store: parseSessionStoreKind(env.SESSION_STORE),
+  };
+}
+
+const configuration = loadSessionConfiguration({
+  ...process.env,
+  SESSION_SECRET: SECRETS.SESSION_SECRET,
+  NODE_ENV: SECRETS.NODE_ENV,
+});
+
+let activeStore: SessionStore | undefined =
+  configuration.store === 'memory'
+    ? createMemorySessionStore(SECRETS.NODE_ENV, configuration.idleTimeoutMs)
+    : configuration.store === 'postgres'
+      ? new PostgresSessionStore(configuration.idleTimeoutMs)
+      : undefined;
+
+/** Plug in a shared store (for example Redis) when SESSION_STORE=custom. */
+export function configureSessionStore(store: SessionStore): void {
+  if (configuration.store !== 'custom')
+    throw new Error('Set SESSION_STORE=custom before configuring a custom session store');
+  if (SECRETS.NODE_ENV === 'production' && !store.productionReady)
+    throw new Error('Refusing a session store that is not production ready when NODE_ENV=production');
+  activeStore = store;
+}
+
+function sessionStore(): SessionStore {
+  if (!activeStore) throw new Error('No session store is configured; call configureSessionStore() at startup');
+  return activeStore;
+}
+
+export const SESSION_COOKIE_NAME = configuration.cookieName;
+export const SESSION_IDLE_TIMEOUT_MS = configuration.idleTimeoutMs;
+export const SESSION_ABSOLUTE_TIMEOUT_MS = configuration.absoluteTimeoutMs;
+export const sessionCookieOptions = Object.freeze({
+  httpOnly: true,
+  secure: configuration.secureCookie,
+  sameSite: 'lax' as const,
+  path: '/',
+});
+
+const SESSION_ID = /^[A-Za-z0-9_-]{43}$/;
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+/** 256 bits from the operating system CSPRNG, base64url encoded (43 characters). */
+export function generateSessionId(): string {
+  return randomBytes(32).toString('base64url');
+}
+
+/** Store lookup key: HMAC-SHA256 of the cookie id under SESSION_SECRET. The raw id is never stored. */
+export function sessionStoreKey(id: string): string {
+  return createHmac('sha256', configuration.secret).update(id).digest('hex');
+}
+
+/** Constant-time synchronizer-token comparison over fixed-length digests. */
+export function csrfTokenMatches(expected: string, presented: unknown): boolean {
+  if (typeof presented !== 'string' || presented.length === 0 || presented.length > 256) return false;
+  return timingSafeEqual(
+    createHash('sha256').update(expected).digest(),
+    createHash('sha256').update(presented).digest(),
+  );
+}
+
+export interface ActiveSession {
+  /** Store key (HMAC of the id), usable with revokeSession(). */
+  key: string;
+  userId: string;
+  csrfToken: string;
+  createdAt: number;
+  absoluteExpiresAt: number;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      authSession?: ActiveSession;
+    }
+  }
+}
+
+type ResolvedIdentity = NonNullable<Awaited<ReturnType<typeof resolveAuthenticationIdentity>>>;
+
+export function isActiveIdentity(value: unknown, userId: string): value is ResolvedIdentity {
+  if (!value || typeof value !== 'object') return false;
+  const identity = value as Partial<ResolvedIdentity>;
+  return identity.id === userId && identity.status === 'active' && typeof identity.email === 'string' &&
+    typeof identity.role === 'string' && identity.role.length > 0 && identity.role.length <= 32;
+}
+
+function presentedSessionId(req: Request): string | undefined {
+  const value: unknown = req.cookies?.[SESSION_COOKIE_NAME];
+  return typeof value === 'string' && SESSION_ID.test(value) ? value : undefined;
+}
+
+export function clearSessionCookie(res: Response): void {
+  res.clearCookie(SESSION_COOKIE_NAME, { ...sessionCookieOptions });
+}
+
+async function issue(res: Response, userId: string, role: string, createdAt: number, absoluteExpiresAt: number, transaction?: unknown): Promise<ActiveSession> {
+  const id = generateSessionId();
+  const key = sessionStoreKey(id);
+  const csrfToken = randomBytes(32).toString('base64url');
+  const now = Date.now();
+  await sessionStore().set(key, { userId, role, csrfToken, createdAt, lastSeenAt: now, absoluteExpiresAt }, transaction);
+  // The cookie carries only the opaque id; identity and tokens stay server-side.
+  res.cookie(SESSION_COOKIE_NAME, id, { ...sessionCookieOptions, maxAge: Math.max(0, absoluteExpiresAt - now) });
+  return { key, userId, csrfToken, createdAt, absoluteExpiresAt };
+}
+
+const PRUNE_INTERVAL_MS = 60_000;
+const PRUNE_BATCH = 500;
+let lastPrune = 0;
+
+/**
+ * Deletes up to `limit` idle-expired or absolute-expired sessions and resolves
+ * the number removed. Call it from a scheduled job to observe failures; login
+ * also runs it opportunistically at most once per minute per process.
+ */
+export async function pruneExpiredSessions(limit = PRUNE_BATCH): Promise<number> {
+  return sessionStore().prune(Date.now(), limit);
+}
+
+function pruneOpportunistically(now: number): void {
+  if (now - lastPrune < PRUNE_INTERVAL_MS) return;
+  lastPrune = now;
+  // Not awaited: cleanup never delays or fails a login, and is retried on the next interval.
+  pruneExpiredSessions().catch(() => undefined);
+}
+
+/**
+ * Login: destroys any session presented with the request (fixation defence)
+ * and issues a brand-new id with fresh idle and absolute deadlines. Pass the
+ * login transaction so a PostgreSQL store writes under the account lock.
+ */
+export async function startSession(req: Request, res: Response, identity: { id: string; role: string }, transaction?: unknown): Promise<ActiveSession> {
+  const store = sessionStore();
+  const previous = presentedSessionId(req);
+  if (previous) await store.destroy(sessionStoreKey(previous), transaction);
+  if (req.authSession) await store.destroy(req.authSession.key, transaction);
+  const now = Date.now();
+  const session = await issue(res, identity.id, identity.role, now, now + configuration.absoluteTimeoutMs, transaction);
+  req.authSession = session;
+  pruneOpportunistically(now);
+  return session;
+}
+
+/**
+ * Privilege change: replaces the current id and CSRF token and destroys the
+ * old record. The absolute deadline is preserved, never extended.
+ */
+export async function regenerateSession(req: Request, res: Response, role: string): Promise<ActiveSession> {
+  const current = req.authSession;
+  if (!current) throw new APIError('Authentication required', 401);
+  // Only the caller that actually removed the old record may mint its replacement.
+  if (!(await sessionStore().destroy(current.key))) {
+    delete req.authSession;
+    delete req.user;
+    clearSessionCookie(res);
+    throw new APIError('Authentication required', 401);
+  }
+  const session = await issue(res, current.userId, role, current.createdAt, current.absoluteExpiresAt);
+  req.authSession = session;
+  return session;
+}
+
+/** Logout: server-side destruction of the current session and cookie removal. */
+export async function destroySession(req: Request, res: Response): Promise<void> {
+  const previous = presentedSessionId(req);
+  clearSessionCookie(res);
+  if (req.authSession) await sessionStore().destroy(req.authSession.key);
+  if (previous) await sessionStore().destroy(sessionStoreKey(previous));
+  delete req.authSession;
+  delete req.user;
+}
+
+/** Server-side revocation of one session by its store key. */
+export async function revokeSession(key: string): Promise<void> {
+  await sessionStore().destroy(key);
+}
+
+/** Server-side revocation of every session of one account (password change, compromise, "log out everywhere"). */
+export async function revokeUserSessions(userId: string): Promise<void> {
+  await sessionStore().destroyAllForUser(userId);
+}
+
+/**
+ * Loads the session when a cookie is presented. Enforces the idle and absolute
+ * timeouts server-side, re-resolves the current account on every request, and
+ * rotates the id when the account's role has changed.
+ */
+export const loadSession = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  delete req.authSession;
+  delete req.user;
+  try {
+    if (req.cookies?.[SESSION_COOKIE_NAME] === undefined) { next(); return; }
+    const id = presentedSessionId(req);
+    if (!id) { clearSessionCookie(res); next(); return; }
+    const key = sessionStoreKey(id);
+    const store = sessionStore();
+    const record = await store.get(key);
+    if (!record) { clearSessionCookie(res); next(); return; }
+    const now = Date.now();
+    if (now >= record.absoluteExpiresAt || now - record.lastSeenAt >= configuration.idleTimeoutMs) {
+      await store.destroy(key);
+      clearSessionCookie(res);
+      next();
+      return;
+    }
+    const identity = await resolveAuthenticationIdentity(record.userId);
+    if (!isActiveIdentity(identity, record.userId)) {
+      await store.destroy(key);
+      clearSessionCookie(res);
+      next();
+      return;
+    }
+    let session: ActiveSession = { key, userId: record.userId, csrfToken: record.csrfToken, createdAt: record.createdAt, absoluteExpiresAt: record.absoluteExpiresAt };
+    if (identity.role !== record.role) {
+      // Atomic delete-and-check: a concurrent logout, revocation or rotation that
+      // already removed the record wins, and no replacement session is minted.
+      if (!(await store.destroy(key))) {
+        clearSessionCookie(res);
+        next();
+        return;
+      }
+      session = await issue(res, identity.id, identity.role, record.createdAt, record.absoluteExpiresAt);
+    } else {
+      await store.touch(key, now);
+    }
+    req.authSession = session;
+    req.user = { id: identity.id, email: identity.email, role: identity.role };
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** Rejects requests without a valid, unexpired server-side session. */
+export const requireSession = (req: Request, res: Response, next: NextFunction): void => {
+  void loadSession(req, res, (error?: unknown) => {
+    if (error) { next(error); return; }
+    if (!req.authSession) { next(new APIError('Authentication required', 401)); return; }
+    next();
+  });
+};
+
+/**
+ * Synchronizer-token CSRF protection. Safe methods (GET, HEAD, OPTIONS) are
+ * exempt; every other method must echo the session's token in X-CSRF-Token.
+ * Place after requireSession or loadSession.
+ */
+export const csrfProtection = (req: Request, _res: Response, next: NextFunction): void => {
+  if (SAFE_METHODS.has(req.method)) { next(); return; }
+  if (!req.authSession || !csrfTokenMatches(req.authSession.csrfToken, req.get('x-csrf-token'))) {
+    next(new APIError('Invalid CSRF token', 403));
+    return;
+  }
+  next();
+};
+
+const trustedOrigins = SECRETS.CORS_ORIGIN.split(',').map((value) => new URL(value.trim()).origin);
+
+/** Login has no session yet, so it requires an exact trusted Origin instead of a synchronizer token. */
+export const requireTrustedOrigin = (req: Request, _res: Response, next: NextFunction): void => {
+  const origin = req.headers.origin;
+  if (typeof origin !== 'string' || !trustedOrigins.includes(origin)) { next(new APIError('Origin not permitted', 403)); return; }
+  next();
+};
+
+const MAX_TRACKED_ADDRESSES = 10_000;
+const attempts = new Map<string, { count: number; until: number }>();
+/**
+ * Bounded per-process login limiter keyed by req.ip; not a distributed
+ * abuse-prevention service. Behind a reverse proxy, configure Express
+ * `trust proxy` to the exact proxy hops, or every client shares one bucket.
+ */
+export const sessionRateLimit = (req: Request, _res: Response, next: NextFunction): void => {
+  const now = Date.now();
+  const key = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+  for (const [address, value] of attempts) if (value.until <= now) attempts.delete(address);
+  const current = attempts.get(key) ?? { count: 0, until: now + 15 * 60 * 1000 };
+  if (current.count >= 30) {
+    next(new APIError('Too many authentication attempts', 429));
+    return;
+  }
+  if (!attempts.has(key))
+    // A full table evicts its oldest windows (Map insertion order) instead of refusing new addresses.
+    while (attempts.size >= MAX_TRACKED_ADDRESSES) {
+      const oldest = attempts.keys().next().value;
+      if (oldest === undefined) break;
+      attempts.delete(oldest);
+    }
+  current.count++;
+  attempts.set(key, current);
+  next();
+};

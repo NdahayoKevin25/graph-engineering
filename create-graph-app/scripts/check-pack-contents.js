@@ -15,7 +15,7 @@ const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const zlib = require('node:zlib');
+const { execNpmSync } = require('./npm-command');
 
 const packageRoot = path.resolve(__dirname, '..');
 
@@ -24,14 +24,14 @@ function listTarballEntries(tarballPath) {
   // present on macOS/Linux by default; avoids adding a package dependency
   // purely for this one dev-time check.
   const output = execFileSync('tar', ['tzf', tarballPath], { encoding: 'utf8' });
-  return output.split('\n').filter(Boolean).map((entry) => entry.replace(/^package\//, ''));
+  return output.split(/\r?\n/).filter(Boolean).map((entry) => entry.replace(/^package\//, ''));
 }
 
 function main() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'create-graph-app-pack-'));
   console.log(`Running npm pack into ${tmpDir}...`);
 
-  const packOutput = execFileSync('npm', ['pack', '--pack-destination', tmpDir, '--json'], {
+  const packOutput = execNpmSync(['pack', '--pack-destination', tmpDir, '--json'], {
     cwd: packageRoot,
     encoding: 'utf8',
   });

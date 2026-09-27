@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["projectName"],
+  "properties": {
+    "projectName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "description": { "type": "string", "maxLength": 512, "default": "" },
+    "port": {
+      "type": "integer",
+      "default": 3001,
+      "minimum": 1,
+      "maximum": 65535
+    },
+    "apiBaseUrl": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "default": "http://localhost:3000"
+    }
+  }
+}

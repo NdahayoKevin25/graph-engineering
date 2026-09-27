@@ -1,0 +1,3 @@
+1. Run the audited `devops.aws` renderer only after `devops.docker` has produced the exact reviewed Dockerfile. Supply the existing ECR image URI with an immutable sha256 digest, the same port, distinct execution/infrastructure/task role ARNs, reviewed subnet/security-group IDs, and only full ARN secret references.
+2. Set `acknowledgeUnverifiedAwsPrerequisites: true` only after the operator acknowledges that IAM, network, image provenance and any future deployment still require independent review.
+3. Inspect the proposed local `deploy/ecs-express-create-service.json`. Rendering performs no AWS, Docker, network or deployment action. Do not invoke `CreateExpressGatewayService` as part of this node.

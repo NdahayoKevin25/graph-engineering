@@ -1,1 +1,1 @@
-file-exists → `npm run build` → confirm the file still contains a `NODE_ENV` production guard. Missing the guard is a hard failure, not a warning.
+Strictly compile in the approved container. Test missing/production/remote target refusal, no application URL fallback, nonempty target refusal, duplicate execution refusal, concurrent operation refusal, transactional rollback and generic nonsecret logs against isolated PostgreSQL. A string-presence check is not runtime evidence.

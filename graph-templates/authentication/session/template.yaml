@@ -1,37 +1,70 @@
 id: authentication.session
 name: Server-Side Session Authentication
-version: 0.1.0
+version: 1.0.0
 description: >
-  Server-side session-store alternative to authentication.jwt — trades the
-  stateless JWT's "no revocation before expiry" tradeoff for instant
-  revocation, at the cost of requiring a session store (e.g. Redis) and
-  making every request a store lookup. Not yet implemented in this library;
-  registered so the graph documents the gap. Prefer authentication.jwt unless
-  instant session revocation is a hard requirement.
+  Server-side session authentication with instant revocation: an opaque
+  256-bit session id in an httpOnly cookie, the session record held in a
+  pluggable SessionStore (development memory store, PostgreSQL store on the
+  existing Drizzle connection, or a custom shared store such as Redis),
+  server-enforced idle and absolute timeouts, id regeneration on login and
+  privilege change, per-session synchronizer-token CSRF protection, and
+  password verification through authentication.password's bcrypt repository.
+  Trades the stateless JWT's "no revocation before expiry" for a store lookup
+  on every authenticated request.
 category: authentication
 subcategory: session
-status: planned
+status: implemented
 type: graph-node
-actions: [generate]
+actions: [generate, detect, validate, test]
 
-inputs: []
-outputs: []
+inputs:
+  - { name: idleTimeout, type: string, required: false, default: "30m" }
+  - { name: absoluteTimeout, type: string, required: false, default: "12h" }
+
+outputs:
+  - { name: files, type: array<string> }
+  - { name: exports, type: array<string> }
+  - { name: routes, type: array<string> }
 
 dependencies:
   packages: []
   services: [session-store]
-  templates: []
+  templates:
+    - { id: authentication.password, relationship: requires }
+    - { id: backend.error-handler, relationship: requires }
+    - { id: backend.middleware, relationship: requires }
+    - { id: database.neon-postgres.connection, relationship: requires }
 
 environment:
-  variables: []
+  variables:
+    - { name: SESSION_SECRET, required: true, secret: true, description: "HMAC key for session store lookup keys. No default: at least 32 bytes of cryptographically random material.", usedBy: [authentication.session] }
+    - { name: SESSION_STORE, required: false, secret: false, description: "memory (default, development only, refused when NODE_ENV=production), postgres, or custom (call configureSessionStore at startup).", usedBy: [authentication.session] }
+    - { name: SESSION_IDLE_TIMEOUT_SECONDS, required: false, secret: false, description: "Idle timeout in seconds, 60 through 86400; defaults to the rendered idleTimeout input.", usedBy: [authentication.session] }
+    - { name: SESSION_ABSOLUTE_TIMEOUT_SECONDS, required: false, secret: false, description: "Absolute session lifetime in seconds, 3600 through 2592000; defaults to the rendered absoluteTimeout input.", usedBy: [authentication.session] }
+    - { name: SESSION_COOKIE_SECURE, required: false, secret: false, description: "true by default. false is accepted only for local HTTP development and refused when NODE_ENV=production.", usedBy: [authentication.session] }
 
 files:
-  create: []
-  modify: []
+  create:
+    - { path: src/sessions/sessionStore.ts, source: files/sessionStore.ts }
+    - { path: src/sessions/postgresSessionStore.ts, source: files/postgresSessionStore.ts }
+    - { path: src/sessions/session.ts, source: files/session.ts.template }
+    - { path: src/routes/sessionRoutes.ts, source: files/sessionRoutes.ts }
+  modify:
+    - { path: src/config/schema.ts, operation: append, source: files/schema.fragment.ts }
+    - { path: src/utils/helpers.ts, operation: insert-before-marker, marker: "// ENV-VAR-FIELDS:", template: "  SESSION_SECRET: string;" }
+    - { path: src/utils/helpers.ts, operation: insert-into-array, marker: "requiredEnvironmentVariables", template: "'SESSION_SECRET'" }
+    - { path: src/utils/helpers.ts, operation: insert-before-marker, marker: "// ENV-VAR-VALUES:", template: "  SESSION_SECRET: process.env.SESSION_SECRET!," }
+    - { path: src/app.ts, operation: insert-before-marker, marker: "// Import routes", template: "import { sessionRoutes } from './routes/sessionRoutes';" }
+    - { path: src/app.ts, operation: insert-before-marker, marker: "// Health check route", template: "app.use('/api/session', sessionRoutes);" }
+    - { path: src/repository/Authentication.ts, operation: merge-import, template: "import { authTokenTable, userProfileTable, userTable, refreshTokenTable, sessionTable } from '../config/schema';" }
+    - { path: src/repository/Authentication.ts, operation: insert-import, template: "import { configuredSessionStoreKind } from '../sessions/sessionStore';" }
+    - { path: src/repository/Authentication.ts, operation: replace-marker, marker: "await tx.update(refreshTokenTable).set({revokedAt:now}).where(eq(refreshTokenTable.userId,stored.userId));", replacement: "await tx.update(refreshTokenTable).set({revokedAt:now}).where(eq(refreshTokenTable.userId,stored.userId));\n        if(configuredSessionStoreKind()==='postgres')await tx.delete(sessionTable).where(eq(sessionTable.userId,stored.userId));" }
+    - { path: src/services/authenticationService.ts, operation: insert-import, template: "import {revokeUserSessions} from '../sessions/session';" }
+    - { path: src/services/authenticationService.ts, operation: replace-marker, marker: "if(!await this.repository.consumeActionToken(token,'password_reset',passwordHash))throw new APIError('Invalid or expired action token',400);", replacement: "const resetUserId=await this.repository.consumeActionToken(token,'password_reset',passwordHash);if(!resetUserId)throw new APIError('Invalid or expired action token',400);await revokeUserSessions(resetUserId);" }
 
 compatible_with:
-  upstream: [project.node-express]
-  downstream: [authorization.rbac]
+  upstream: [authentication.password, database.neon-postgres.connection, backend.error-handler, backend.middleware]
+  downstream: [authorization.rbac, authorization.tenant-isolation]
 
 consumes:
   artifacts: []
@@ -40,17 +73,36 @@ produces:
 
 idempotency:
   strategy: detect-and-skip
-  detection: "not applicable — planned"
+  detection: "src/sessions/session.ts exists and exports requireSession"
 
 validation:
-  checks: []
+  checks:
+    - { type: file-exists, path: src/sessions/session.ts }
+    - { type: exports, path: src/sessions/session.ts, names: [requireSession, csrfProtection, startSession, regenerateSession, destroySession, revokeSession, revokeUserSessions] }
+    - { type: mounted-in, path: src/app.ts, pattern: "/api/session" }
+    - { type: build, command: "npm run build" }
 
 testing:
-  strategy: none
+  strategy: api
+  location: tests/session.test.ts
+  command: "npm test -- authenticationSession"
 
 security:
   considerations:
-    - "Mutually exclusive with authentication.jwt — an application picks one session strategy, not both (see dependencies.templates relationship: conflicts on authentication.jwt once this node is implemented)."
+    - "Session ids are 32 bytes from node:crypto randomBytes (256 bits). The cookie holds only that opaque id; the store is keyed by HMAC-SHA256(SESSION_SECRET, id), so the raw id is never persisted and a leaked store cannot be replayed as cookies."
+    - "The cookie is httpOnly, SameSite=Lax, Path=/ and Secure (named __Host-sid). SESSION_COOKIE_SECURE=false is accepted only for local HTTP development and refused when NODE_ENV=production."
+    - "Login destroys any presented session and issues a new id (fixation defence); a role change observed on any request rotates the id and CSRF token while keeping the original absolute deadline; logout destroys the record server-side."
+    - "Idle and absolute timeouts are enforced server-side on every request; activity never extends the absolute deadline."
+    - "revokeSession(key) and revokeUserSessions(userId) revoke server-side immediately; POST /api/session/logout-all revokes every session of the caller."
+    - "A password reset revokes every session of the account: with SESSION_STORE=postgres the sessions are deleted inside the reset transaction, and for every store the reset service also calls revokeUserSessions once the reset commits. The password node has no separate password-change endpoint; call revokeUserSessions() from any you add."
+    - "Login takes the same per-account PostgreSQL advisory lock as JWT login, refresh and reset, re-reads the password hash inside that transaction, and writes a PostgreSQL session inside it, so a concurrent reset cannot leave a session issued with the old password."
+    - "Role-change rotation mints a replacement only when its atomic delete removed the old record, so a concurrent logout, revocation or rotation never resurrects or duplicates a session."
+    - "pruneExpiredSessions() deletes idle-expired and absolute-expired sessions in bounded batches; login also runs it at most once a minute per process."
+    - "Every non-GET/HEAD/OPTIONS request behind csrfProtection must echo the per-session synchronizer token in X-CSRF-Token, compared in constant time; login, which has no session yet, requires an exact trusted Origin."
+    - "Passwords are verified by authentication.password's bcrypt repository, with a real dummy comparison for unknown accounts, one generic 'Invalid credentials' message, and no credential logging. SESSION_SECRET must differ from ACCESS_TOKEN_SECRET and REFRESH_TOKEN_SECRET."
+    - "The login limiter is per process and keyed by req.ip; behind a reverse proxy configure Express trust proxy to the exact hop count. When its table is full it evicts the oldest windows."
+    - "The in-memory store is development-only: it logs a warning at startup and refuses to start when NODE_ENV=production. Use SESSION_STORE=postgres or a custom shared store in production."
+    - "Choose one browser session mechanism per application. This node does not remove authentication.jwt's /api/auth routes composed by authentication.password; disable them if sessions are the only mechanism."
 
 documentation:
-  required: []
+  required: [README.md]

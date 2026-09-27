@@ -55,7 +55,7 @@ files:
 
 compatible_with:
   upstream: [database.neon-postgres.connection, backend.error-handler, backend.middleware]
-  downstream: [authentication.password, backend.express, authorization.rbac, authorization.tenant-isolation]
+  downstream: [authentication.password, authentication.oauth, backend.express, authorization.rbac, authorization.tenant-isolation]
 
 consumes:
   artifacts: []

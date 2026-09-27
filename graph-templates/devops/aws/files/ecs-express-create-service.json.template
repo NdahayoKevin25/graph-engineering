@@ -1,0 +1,16 @@
+{
+  "serviceName": {{json input.serviceName}},
+  "executionRoleArn": {{json input.executionRoleArn}},
+  "infrastructureRoleArn": {{json input.infrastructureRoleArn}},
+  "taskRoleArn": {{json input.taskRoleArn}},
+  "healthCheckPath": "/",
+  "primaryContainer": {
+    "image": {{json input.imageUri}},
+    "containerPort": {{json input.port}},
+    "secrets": {{json input.secrets}}
+  },
+  "networkConfiguration": {
+    "subnets": {{json input.subnetIds}},
+    "securityGroups": {{json input.securityGroupIds}}
+  }
+}

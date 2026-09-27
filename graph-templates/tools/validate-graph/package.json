@@ -4,7 +4,7 @@
   "description": "Validates a generated project's resolved graph (architecture.json + .graph/manifest.json) against template-registry.json — the ai.validation-agent's mechanical backend.",
   "main": "index.js",
   "bin": { "validate-graph": "./index.js" },
-  "scripts": { "start": "node index.js" },
-  "dependencies": {},
+  "scripts": { "start": "node index.js", "test": "node --test test/*.test.js" },
+  "dependencies": { "ajv": "^8.17.1", "ajv-formats": "^3.0.1" },
   "license": "MIT"
 }

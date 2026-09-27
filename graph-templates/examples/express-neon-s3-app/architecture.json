@@ -72,7 +72,7 @@
       { "id": "testing.integration", "order": 24, "inputs": {} },
       { "id": "testing.api", "order": 25, "inputs": {} },
       { "id": "testing.fixtures", "order": 26, "inputs": {} },
-      { "id": "devops.docker", "order": 27, "inputs": { "port": 3000, "nodeVersion": 20 } },
+      { "id": "devops.docker", "order": 27, "inputs": { "port": 3000, "nodeVersion": "24" } },
       { "id": "devops.github-actions", "order": 28, "inputs": {} },
       { "id": "devops.environments", "order": 29, "inputs": {} },
       { "id": "documentation.setup", "order": 30, "inputs": {} },

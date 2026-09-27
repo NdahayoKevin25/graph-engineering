@@ -1,0 +1,31 @@
+{
+  "inputs": {
+    "target": "ecs-express",
+    "generatedAt": "2026-09-23T00:00:00Z",
+    "serviceName": "example-api",
+    "imageUri": "000000000000.dkr.ecr.us-east-1.amazonaws.com/example/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "port": 3000,
+    "executionRoleArn": "arn:aws:iam::000000000000:role/example-ecs-execution",
+    "infrastructureRoleArn": "arn:aws:iam::000000000000:role/example-ecs-infrastructure",
+    "taskRoleArn": "arn:aws:iam::000000000000:role/example-app-task",
+    "subnetIds": ["subnet-0123456789abcdef0", "subnet-abcdef01234567890"],
+    "securityGroupIds": ["sg-0123456789abcdef0"],
+    "secrets": [
+      {
+        "name": "DATABASE_URL",
+        "valueFrom": "arn:aws:secretsmanager:us-east-1:000000000000:secret:example/database-AbCd12"
+      }
+    ],
+    "acknowledgeUnverifiedAwsPrerequisites": true
+  },
+  "expectedOutputs": {
+    "files": [
+      "Dockerfile",
+      ".dockerignore",
+      "docker-compose.yml",
+      ".github/workflows/ci.yml",
+      "deploy/ecs-express-create-service.json",
+      "deployment.schema.json"
+    ]
+  }
+}

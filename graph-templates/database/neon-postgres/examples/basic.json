@@ -1,7 +1,7 @@
 {
   "inputs": {},
   "expectedOutputs": {
-    "files": ["src/config/database.ts", "src/config/schema.ts", "drizzle.config.ts"],
+    "files": ["src/utils/helpers.ts", "package.json", "src/config/database.ts", "src/config/database-url.ts", "src/config/schema.ts", "drizzle.config.ts"],
     "exports": ["database", "pool"]
   }
 }

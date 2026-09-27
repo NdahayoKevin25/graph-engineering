@@ -1,5 +1,12 @@
 # authorization.rbac
 
+The engine now provides an audited deterministic RBAC renderer. Its
+credential, identity, cookie, concurrency and authorization contract is documented
+in [the executable authentication guide](../../../docs/authentication-runtime.md).
+That runtime emits reviewed source and tests; it does not execute the historical
+prompt/asset snippets below, configure secrets, deliver email, or authorize a
+deployment automatically. Existing custom code requires explicit reconciliation.
+
 **What.** `requireRole(...roles)` — an Express middleware factory. Reads `req.user.role` (set by `authentication.jwt`'s `authMiddleware`) and calls `next(new APIError('Forbidden', 403))` if the caller's role isn't in the allowlist; `next(new APIError('Authentication required', 401))` if `req.user` is missing entirely.
 
 **When.** After `authentication.jwt`, `backend.error-handler`. Composed into a route's middleware chain by `backend.express`/`api.crud`, always placed after `authMiddleware`.

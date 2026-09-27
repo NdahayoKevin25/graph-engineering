@@ -2,10 +2,10 @@ id: database.migrations
 name: Drizzle Migration Workflow
 version: 1.0.0
 description: >
-  Not a code-generating node — this documents and guards the drizzle-kit
-  migration workflow that database.neon-postgres.connection's npm scripts
-  (dbGenerate/dbMigrate) drive. Ensures src/migrations/ exists with a README
-  explaining the workflow so an agent never hand-writes migration SQL.
+  Generates a guarded Drizzle migration runner with an explicit separate URL,
+  expected database name, acknowledgement and advisory lock. Validates applied
+  migration hashes before applying pending SQL transactionally. This is not
+  an automatic inverse/down-migration generator.
 category: database
 subcategory: migrations
 status: implemented
@@ -30,7 +30,9 @@ files:
   create:
     - { path: src/migrations/.gitkeep, source: files/gitkeep }
     - { path: src/migrations/README.md, source: files/README-migrations.md }
-  modify: []
+    - { path: src/scripts/migrate.ts, source: files/migrate.ts }
+  modify:
+    - { path: package.json, operation: merge-json, template: '{"scripts":{"dbMigrate":"node dist/scripts/migrate.js"}}' }
 
 compatible_with:
   upstream: [database.neon-postgres.connection, backend.repository]
@@ -49,7 +51,8 @@ validation:
   checks:
     - { type: file-exists, path: src/migrations/README.md }
     - type: migration-pending-check
-      command: "npx drizzle-kit generate"
+      command: "npm --ignore-scripts run dbGenerate"
+      sandbox: docker
       description: "Must produce no new migration file when schema.ts and src/migrations/ are already in sync."
 
 testing:
@@ -59,7 +62,8 @@ testing:
 
 security:
   considerations:
-    - "npm run dbMigrate applies SQL directly to DATABASE_URL — never run it unattended against a production connection string. Gate it behind manual approval or a CI job that requires review (see devops.github-actions), not an agent's own generate/modify loop."
+    - "dbMigrate uses only MIGRATION_DATABASE_URL, an exact GRAPH_DATABASE_EXPECTED_NAME, explicit NODE_ENV and GRAPH_DATABASE_MIGRATE=reviewed-migration. These declarations do not prove external approval or database classification."
+    - "Failed PostgreSQL migration transactions roll back. Reverting an already committed migration needs a separately reviewed forward fix or restore plan; no automatic down command is provided."
     - "Migration files are generated output, not hand-edited — a hand-edited migration can silently diverge from schema.ts and break dbGenerate's drift detection this node's validation.checks relies on."
 
 documentation:

@@ -1,0 +1,46 @@
+{
+  "input": "An approved Next.js application with authentication.password in the backend graph, auth strategy jwt, GET /api/products available to an authenticated user, and an application-owned /dashboard route awaiting integration.",
+  "output": {
+    "$schema": "../../../artifacts/frontend.schema.json",
+    "artifactType": "frontend.schema",
+    "version": "1.0.0",
+    "metadata": {
+      "generatedBy": "ai.frontend-agent",
+      "generatedAt": "2026-09-23T00:00:00Z",
+      "projectName": "dashboard-example",
+      "sourceArtifacts": ["architecture.json", "api.json", "auth.json"]
+    },
+    "data": {
+      "framework": "nextjs",
+      "pages": [
+        {
+          "route": "/dashboard",
+          "name": "WorkspaceDashboardPage",
+          "requiresAuth": true,
+          "consumesApiRoutes": ["/api/products"],
+          "components": ["WorkspaceDashboard"]
+        },
+        {
+          "route": "/login",
+          "name": "LoginPage",
+          "requiresAuth": false,
+          "consumesApiRoutes": ["/api/auth/login"],
+          "components": ["AuthContext"]
+        }
+      ],
+      "components": [
+        { "name": "WorkspaceDashboard", "kind": "dashboard" },
+        { "name": "AuthContext", "kind": "authentication" }
+      ]
+    }
+  },
+  "resolvedNodeSequence": [
+    "project.nextjs",
+    "frontend.nextjs",
+    "frontend.authentication",
+    "frontend.forms",
+    "frontend.tables",
+    "frontend.dashboards"
+  ],
+  "integrationBoundary": "The catalog node supplies a reusable component and test. The route, approved table path, statistics data, profile-save callback and backend access checks remain application-owned."
+}

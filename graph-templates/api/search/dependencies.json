@@ -1,0 +1,17 @@
+{
+  "packages": [
+    { "name": "pg", "version": "8.23.0" },
+    { "name": "drizzle-orm", "version": "0.45.3" },
+    { "name": "express", "version": "4.22.3" },
+    { "name": "vitest", "version": "4.1.11", "dev": true },
+    { "name": "supertest", "version": "7.2.2", "dev": true }
+  ],
+  "services": [],
+  "templates": [
+    { "id": "database.neon-postgres.connection", "relationship": "requires" },
+    { "id": "backend.repository", "relationship": "requires" },
+    { "id": "backend.middleware", "relationship": "requires" },
+    { "id": "authentication.jwt", "relationship": "requires" },
+    { "id": "database.migrations", "relationship": "extends" }
+  ]
+}

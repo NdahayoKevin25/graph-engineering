@@ -3,6 +3,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
+const { isDeepStrictEqual } = require('util');
 let yaml;
 try {
   yaml = require('js-yaml');
@@ -36,17 +38,20 @@ function nonEmptyDir(p) {
   return exists(p) && fs.statSync(p).isDirectory() && fs.readdirSync(p).length > 0;
 }
 
-function validateOne(templatePath, allIds) {
+function validateOne(templatePath, allIds, templateRoot) {
   const errors = [];
   const warnings = [];
   const dir = path.dirname(templatePath);
-  const rel = path.relative(ROOT, templatePath);
+  const rel = path.relative(templateRoot, templatePath);
 
   let doc;
   try {
     doc = yaml.load(fs.readFileSync(templatePath, 'utf8'));
   } catch (e) {
     return { id: rel, errors: [`invalid YAML: ${e.message}`], warnings: [] };
+  }
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
+    return { id: rel, errors: ['template.yaml must contain a mapping'], warnings: [] };
   }
 
   const required = ['id', 'name', 'version', 'description', 'category', 'subcategory', 'status', 'type', 'actions'];
@@ -67,7 +72,7 @@ function validateOne(templatePath, allIds) {
   }
 
   if (doc.id) {
-    const dirSegments = path.relative(ROOT, dir).split(path.sep);
+    const dirSegments = path.relative(templateRoot, dir).split(path.sep);
     const idSegments = doc.id.split('.');
     if (dirSegments.length >= 2 && idSegments.length >= 2) {
       const expected = dirSegments.slice(0, 2).join('.');
@@ -124,8 +129,76 @@ function validateOne(templatePath, allIds) {
   return { id: doc.id || rel, errors, warnings };
 }
 
+function validateRegistry(templateRoot, results) {
+  const registryFile = path.join(templateRoot, 'template-registry.json');
+  let committed;
+  try {
+    committed = JSON.parse(fs.readFileSync(registryFile, 'utf8'));
+  } catch (error) {
+    results.errors.push({ template: 'template-registry.json', message: `missing or invalid registry: ${error.message}` });
+    return;
+  }
+
+  // The generator is the source of truth for derived tags, dependencies, paths,
+  // and ordering. Invoke it on the template root so paths have the same base as
+  // the committed registry. The validator's own installation supplies js-yaml.
+  const localNodeModules = path.join(__dirname, 'node_modules');
+  const generated = spawnSync(
+    process.execPath,
+    [path.join(__dirname, '../generate-registry/index.js'), templateRoot],
+    {
+      encoding: 'utf8',
+      maxBuffer: 16 * 1024 * 1024,
+      timeout: 15_000,
+      env: {
+        ...process.env,
+        NODE_PATH: [localNodeModules, process.env.NODE_PATH].filter(Boolean).join(path.delimiter),
+      },
+    },
+  );
+  if (generated.error || generated.status !== 0 || generated.stderr) {
+    results.errors.push({
+      template: 'template-registry.json',
+      message: `registry generation failed: ${(generated.error?.message || generated.stderr || `exit ${generated.status}`).trim()}`,
+    });
+    return;
+  }
+  let expected;
+  try {
+    expected = JSON.parse(generated.stdout);
+  } catch (error) {
+    results.errors.push({ template: 'template-registry.json', message: `registry generator returned invalid JSON: ${error.message}` });
+    return;
+  }
+
+  if (!expected || typeof expected !== 'object' || !Array.isArray(expected.templates)) {
+    results.errors.push({ template: 'template-registry.json', message: 'registry generator must return a templates array' });
+    return;
+  }
+
+  if (!committed || typeof committed !== 'object' || !Array.isArray(committed.templates)) {
+    results.errors.push({ template: 'template-registry.json', message: 'registry must contain a templates array' });
+    return;
+  }
+  const { generatedAt: _committedAt, templates: committedTemplates, ...committedMetadata } = committed;
+  const { generatedAt: _expectedAt, templates: expectedTemplates, ...expectedMetadata } = expected;
+  if (!isDeepStrictEqual(committedMetadata, expectedMetadata)) {
+    results.errors.push({ template: 'template-registry.json', message: 'registry metadata differs from generated catalog; regenerate template-registry.json' });
+  }
+  if (!isDeepStrictEqual(committedTemplates.map((entry) => entry?.id), expectedTemplates.map((entry) => entry.id))) {
+    results.errors.push({ template: 'template-registry.json', message: 'registry identity/order differs from template.yaml inventory; regenerate template-registry.json' });
+    return;
+  }
+  for (let index = 0; index < expectedTemplates.length; index++) {
+    if (!isDeepStrictEqual(committedTemplates[index], expectedTemplates[index])) {
+      results.errors.push({ template: expectedTemplates[index].id, message: 'registry entry differs from template.yaml; regenerate template-registry.json' });
+    }
+  }
+}
+
 function main() {
-  const files = findTemplateFiles(path.join(ROOT, 'graph-templates').length && exists(path.join(ROOT, 'graph-templates')) ? path.join(ROOT, 'graph-templates') : ROOT);
+  const templateRoot = exists(path.join(ROOT, 'graph-templates')) ? path.join(ROOT, 'graph-templates') : ROOT;
+  const files = findTemplateFiles(templateRoot);
   const parsedDocs = files.map((f) => {
     try {
       return { file: f, doc: yaml.load(fs.readFileSync(f, 'utf8')) };
@@ -133,11 +206,11 @@ function main() {
       return { file: f, doc: null };
     }
   });
-  const allIds = new Set(parsedDocs.filter((p) => p.doc && p.doc.id).map((p) => p.doc.id));
+  const allIds = new Set(parsedDocs.filter((p) => p.doc && typeof p.doc === 'object' && !Array.isArray(p.doc) && p.doc.id).map((p) => p.doc.id));
 
   const idCounts = new Map();
   for (const { doc } of parsedDocs) {
-    if (doc && doc.id) idCounts.set(doc.id, (idCounts.get(doc.id) || 0) + 1);
+    if (doc && typeof doc === 'object' && !Array.isArray(doc) && doc.id) idCounts.set(doc.id, (idCounts.get(doc.id) || 0) + 1);
   }
 
   const results = { valid: true, templatesChecked: files.length, errors: [], warnings: [] };
@@ -149,10 +222,12 @@ function main() {
   }
 
   for (const file of files) {
-    const { id, errors, warnings } = validateOne(file, allIds);
+    const { id, errors, warnings } = validateOne(file, allIds, templateRoot);
     for (const message of errors) results.errors.push({ template: id, message });
     for (const message of warnings) results.warnings.push({ template: id, message });
   }
+
+  validateRegistry(templateRoot, results);
 
   results.valid = results.errors.length === 0;
   console.log(JSON.stringify(results, null, 2));

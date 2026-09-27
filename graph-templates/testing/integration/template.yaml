@@ -4,9 +4,9 @@ version: 1.0.0
 description: >
   Tests that hit a REAL Postgres database, as opposed to testing.unit's
   mocked repository layer. Provides a testDatabase helper that connects to
-  TEST_DATABASE_URL and truncates every application table between tests,
-  with a loud refusal to run against NODE_ENV=production or a missing
-  TEST_DATABASE_URL fallback to the real DATABASE_URL.
+  an explicit TEST_DATABASE_URL using the standard Node PostgreSQL driver.
+  Guarded cleanup truncates only explicitly named public-schema tables in
+  one statement without CASCADE. No application database fallback is allowed.
 category: testing
 subcategory: integration
 status: implemented
@@ -17,17 +17,21 @@ inputs: []
 
 outputs:
   - { name: files, type: array<string>, description: "tests/setup/testDatabase.ts" }
-  - { name: exports, type: array<string>, description: "getTestDatabase, truncateAllTables" }
+  - { name: exports, type: array<string>, description: "getTestDatabase, truncateAllTables, closeTestDatabase" }
 
 dependencies:
-  packages: []
+  packages:
+    - { name: pg, version: "^8.23.0" }
+    - { name: "@types/pg", version: "^8.23.1", dev: true }
+    - { name: drizzle-orm, version: "^0.45.3" }
   services: [postgres]
   templates:
     - { id: database.neon-postgres.connection, relationship: requires }
 
 environment:
   variables:
-    - { name: TEST_DATABASE_URL, required: false, secret: true, description: "Connection string for a disposable test database. If unset, falls back to DATABASE_URL with a loud console warning.", usedBy: [testing.integration] }
+    - { name: TEST_DATABASE_URL, required: true, secret: true, description: "Explicit disposable PostgreSQL database ending in _test. Never falls back to DATABASE_URL.", usedBy: [testing.integration] }
+    - { name: GRAPH_TEST_DATABASE_ALLOW_TRUNCATE, required: false, secret: false, description: "Set to 1 only in disposable test environments to permit destructive table cleanup.", usedBy: [testing.integration] }
 
 files:
   create:
@@ -50,7 +54,7 @@ idempotency:
 validation:
   checks:
     - { type: file-exists, path: tests/setup/testDatabase.ts }
-    - { type: exports, path: tests/setup/testDatabase.ts, names: [getTestDatabase, truncateAllTables] }
+    - { type: exports, path: tests/setup/testDatabase.ts, names: [getTestDatabase, truncateAllTables, closeTestDatabase] }
     - { type: build, command: "npm run build" }
 
 testing:
@@ -60,8 +64,9 @@ testing:
 
 security:
   considerations:
-    - "getTestDatabase() throws immediately if NODE_ENV === 'production' — truncateAllTables is destructive by design (it deletes every row in every application table) and must never be reachable in a production process."
-    - "If TEST_DATABASE_URL is unset, this node falls back to DATABASE_URL but only after printing a console.warn naming the risk — silent fallback to a possibly-real database would be a data-loss trap, so it is intentionally noisy instead of intentionally blocked (blocking would make local dev without a second database impossible; noisy-but-allowed is the deliberate tradeoff)."
+    - "NODE_ENV must equal test and TEST_DATABASE_URL must explicitly name a database ending in _test; DATABASE_URL is never a fallback. Matching application targets are rejected even if credentials differ."
+    - "Cleanup additionally requires GRAPH_TEST_DATABASE_ALLOW_TRUNCATE=1. All table identifiers are bounded and validated before any connection. Only listed public-schema tables are truncated, atomically, without CASCADE."
+    - "URL driver overrides and certificate filesystem paths are rejected. Database naming and URL comparisons are defense in depth, not proof of isolation: operators must provision a disposable database and a role with no production access."
 
 documentation:
   required: [README.md]

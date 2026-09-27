@@ -1,0 +1,26 @@
+{
+  "$schema": "urn:graph-engineering:artifact:deployment.schema:1.0.0",
+  "artifactType": "deployment.schema",
+  "version": "1.0.0",
+  "metadata": {
+    "generatedBy": "graph-engineering:devops.deployment",
+    "generatedAt": {{json input.generatedAt}},
+    "projectName": "redacted",
+    "sourceArtifacts": [
+      "Dockerfile",
+      ".dockerignore",
+      "docker-compose.yml",
+      ".github/workflows/ci.yml",
+      "deploy/ecs-express-create-service.json"
+    ]
+  },
+  "data": {
+    "target": "ecs-express",
+    "dockerfile": "Dockerfile",
+    "ciProvider": "github-actions",
+    "ciFile": ".github/workflows/ci.yml",
+    "envInventoryComplete": false,
+    "requiredEnvVars": [],
+    "healthCheckPath": "/"
+  }
+}

@@ -1,16 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { databaseOptions } from '../../../../src/config/database-url';
 
 describe('database.neon-postgres.connection', () => {
-  it('fails fast when DATABASE_URL is not set', async () => {
-    vi.resetModules();
-    const original = process.env.DATABASE_URL;
-    delete process.env.DATABASE_URL;
-    delete process.env.NEON_DATABASE_URL;
-
-    await expect(import('../../../../src/utils/helpers')).rejects.toThrow(
-      /Missing required environment variables/,
-    );
-
-    if (original) process.env.DATABASE_URL = original;
+  it('rejects absent URLs and weakening TLS flags before a connection is created', () => {
+    expect(() => databaseOptions(undefined)).toThrow(/configuration/);
+    expect(() => databaseOptions('postgresql://fixture:example@remote.invalid/db?sslmode=disable')).toThrow();
+    const options=databaseOptions('postgresql://fixture:example@remote.invalid/db?sslmode=require');
+    expect(options.ssl).toEqual({rejectUnauthorized:true});
+    expect(typeof options.password).toBe('function');
   });
 });

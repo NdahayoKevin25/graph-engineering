@@ -1,1 +1,9 @@
-{ "packages": [], "services": ["postgres"], "templates": [{ "id": "database.neon-postgres.connection", "relationship": "requires" }] }
+{
+  "packages": [
+    { "name": "pg", "version": "^8.23.0" },
+    { "name": "@types/pg", "version": "^8.23.1", "dev": true },
+    { "name": "drizzle-orm", "version": "^0.45.3" }
+  ],
+  "services": ["postgres"],
+  "templates": [{ "id": "database.neon-postgres.connection", "relationship": "requires" }]
+}

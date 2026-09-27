@@ -1,35 +1,263 @@
 {
   "projectName": "multi-tenant-saas",
   "nodes": {
-    "project.node-express": { "version": "1.0.0", "generatedAt": "2026-02-03T09:30:00Z", "files": ["package.json", "tsconfig.json", ".env.example", ".gitignore", "src/app.ts", "src/utils/helpers.ts"] },
-    "backend.error-handler": { "version": "1.0.0", "generatedAt": "2026-02-03T09:30:05Z", "files": ["src/middlewares/errorMiddleware.ts"] },
-    "backend.api-response": { "version": "1.0.0", "generatedAt": "2026-02-03T09:30:10Z", "files": ["src/utils/apiResponse.ts"] },
-    "backend.pagination": { "version": "1.0.0", "generatedAt": "2026-02-03T09:30:15Z", "files": ["src/utils/pagination.ts"] },
-    "backend.middleware": { "version": "1.0.0", "generatedAt": "2026-02-03T09:30:20Z", "files": ["src/middlewares/asyncHandler.ts"] },
-    "backend.validation": { "version": "1.0.0", "generatedAt": "2026-02-03T09:30:25Z", "files": ["src/middlewares/validationMiddleware.ts"] },
-    "database.neon-postgres.connection": { "version": "1.0.0", "generatedAt": "2026-02-03T09:30:30Z", "files": ["src/config/database.ts", "src/config/schema.ts", "drizzle.config.ts"] },
-    "database.migrations": { "version": "1.0.0", "generatedAt": "2026-02-03T09:30:35Z", "files": ["src/migrations/meta/_journal.json"] },
-    "database.transactions": { "version": "1.0.0", "generatedAt": "2026-02-03T09:30:40Z", "files": ["src/utils/withTransaction.ts"] },
-    "storage.aws-s3": { "version": "1.0.0", "generatedAt": "2026-02-03T09:30:45Z", "files": ["src/config/s3-client.ts"] },
-    "storage.upload": { "version": "1.0.0", "generatedAt": "2026-02-03T09:30:50Z", "files": ["src/config/multer.config.ts", "src/repository/FileUpload.ts"] },
-    "storage.file-validation": { "version": "1.0.0", "generatedAt": "2026-02-03T09:30:55Z", "files": ["src/middlewares/fileValidation.ts", "src/config/multer.config.ts"] },
-    "storage.presigned-url": { "version": "1.0.0", "generatedAt": "2026-02-03T09:31:00Z", "files": ["src/repository/PresignedUrl.ts"] },
-    "authentication.jwt": { "version": "1.0.0", "generatedAt": "2026-02-03T09:31:05Z", "files": ["src/middlewares/authMiddleware.ts", "src/utils/tokens.ts", "src/routes/authRefreshRoutes.ts"] },
-    "authentication.password": { "version": "1.0.0", "generatedAt": "2026-02-03T09:31:10Z", "files": ["src/repository/Authentication.ts", "src/services/authenticationService.ts", "src/controllers/authenticationController.ts", "src/routes/authenticationRoutes.ts"] },
-    "authorization.rbac": { "version": "1.0.0", "generatedAt": "2026-02-03T09:31:15Z", "files": ["src/middlewares/rbacMiddleware.ts"] },
-    "authorization.tenant-isolation": { "version": "1.0.0", "generatedAt": "2026-02-03T09:31:20Z", "files": ["src/middlewares/tenantMiddleware.ts", "src/middlewares/tenantScope.ts"] },
-    "backend.repository": { "version": "1.0.0", "generatedAt": "2026-02-03T09:31:25Z", "files": ["src/repository/Project.ts", "src/config/schema.ts"] },
-    "backend.service": { "version": "1.0.0", "generatedAt": "2026-02-03T09:31:30Z", "files": ["src/services/projectService.ts"] },
-    "backend.controller": { "version": "1.0.0", "generatedAt": "2026-02-03T09:31:35Z", "files": ["src/controllers/projectController.ts"] },
-    "backend.express": { "version": "1.0.0", "generatedAt": "2026-02-03T09:31:40Z", "files": ["src/routes/projectRoutes.ts", "src/app.ts"] },
-    "api.crud": { "version": "1.0.0", "generatedAt": "2026-02-03T09:31:45Z", "files": ["src/repository/Project.ts"] },
-    "devops.docker": { "version": "1.0.0", "generatedAt": "2026-02-03T09:31:50Z", "files": ["Dockerfile", ".dockerignore", "docker-compose.yml"] },
-    "devops.github-actions": { "version": "1.0.0", "generatedAt": "2026-02-03T09:31:55Z", "files": [".github/workflows/ci.yml"] },
-    "testing.unit": { "version": "1.0.0", "generatedAt": "2026-02-03T09:32:00Z", "files": ["vitest.config.ts"] },
-    "testing.integration": { "version": "1.0.0", "generatedAt": "2026-02-03T09:32:05Z", "files": ["tests/setup/integration.setup.ts"] },
-    "testing.api": { "version": "1.0.0", "generatedAt": "2026-02-03T09:32:10Z", "files": [] },
-    "documentation.setup": { "version": "1.0.0", "generatedAt": "2026-02-03T09:32:15Z", "files": ["docs/SETUP.md"] },
-    "documentation.api": { "version": "1.0.0", "generatedAt": "2026-02-03T09:32:20Z", "files": ["docs/API.md"] },
-    "documentation.architecture": { "version": "1.0.0", "generatedAt": "2026-02-03T09:32:25Z", "files": ["docs/ARCHITECTURE.md"] }
-  }
+    "project.node-express": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:30:00Z",
+      "files": [
+        "package.json",
+        "tsconfig.json",
+        ".env.example",
+        ".gitignore",
+        "src/app.ts",
+        "src/utils/helpers.ts"
+      ],
+      "templateId": "project.node-express"
+    },
+    "backend.error-handler": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:30:05Z",
+      "files": [
+        "src/middlewares/errorMiddleware.ts"
+      ],
+      "templateId": "backend.error-handler"
+    },
+    "backend.api-response": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:30:10Z",
+      "files": [
+        "src/utils/apiResponse.ts"
+      ],
+      "templateId": "backend.api-response"
+    },
+    "backend.pagination": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:30:15Z",
+      "files": [
+        "src/utils/pagination.ts"
+      ],
+      "templateId": "backend.pagination"
+    },
+    "backend.middleware": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:30:20Z",
+      "files": [
+        "src/middlewares/asyncHandler.ts"
+      ],
+      "templateId": "backend.middleware"
+    },
+    "backend.validation": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:30:25Z",
+      "files": [
+        "src/middlewares/validationMiddleware.ts"
+      ],
+      "templateId": "backend.validation"
+    },
+    "database.neon-postgres.connection": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:30:30Z",
+      "files": [
+        "src/config/database.ts",
+        "src/config/schema.ts",
+        "drizzle.config.ts"
+      ],
+      "templateId": "database.neon-postgres.connection"
+    },
+    "database.migrations": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:30:35Z",
+      "files": [
+        "src/migrations/meta/_journal.json"
+      ],
+      "templateId": "database.migrations"
+    },
+    "database.transactions": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:30:40Z",
+      "files": [
+        "src/utils/withTransaction.ts"
+      ],
+      "templateId": "database.transactions"
+    },
+    "storage.aws-s3": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:30:45Z",
+      "files": [
+        "src/config/s3-client.ts"
+      ],
+      "templateId": "storage.aws-s3"
+    },
+    "storage.upload": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:30:50Z",
+      "files": [
+        "src/config/multer.config.ts",
+        "src/repository/FileUpload.ts"
+      ],
+      "templateId": "storage.upload"
+    },
+    "storage.file-validation": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:30:55Z",
+      "files": [
+        "src/middlewares/fileValidation.ts",
+        "src/config/multer.config.ts"
+      ],
+      "templateId": "storage.file-validation"
+    },
+    "storage.presigned-url": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:31:00Z",
+      "files": [
+        "src/repository/PresignedUrl.ts"
+      ],
+      "templateId": "storage.presigned-url"
+    },
+    "authentication.jwt": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:31:05Z",
+      "files": [
+        "src/middlewares/authMiddleware.ts",
+        "src/utils/tokens.ts",
+        "src/routes/authRefreshRoutes.ts"
+      ],
+      "templateId": "authentication.jwt"
+    },
+    "authentication.password": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:31:10Z",
+      "files": [
+        "src/repository/Authentication.ts",
+        "src/services/authenticationService.ts",
+        "src/controllers/authenticationController.ts",
+        "src/routes/authenticationRoutes.ts"
+      ],
+      "templateId": "authentication.password"
+    },
+    "authorization.rbac": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:31:15Z",
+      "files": [
+        "src/middlewares/rbacMiddleware.ts"
+      ],
+      "templateId": "authorization.rbac"
+    },
+    "authorization.tenant-isolation": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:31:20Z",
+      "files": [
+        "src/middlewares/tenantMiddleware.ts",
+        "src/middlewares/tenantScope.ts"
+      ],
+      "templateId": "authorization.tenant-isolation"
+    },
+    "backend.repository:Project": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:31:25Z",
+      "files": [
+        "src/repository/Project.ts",
+        "src/config/schema.ts"
+      ],
+      "templateId": "backend.repository"
+    },
+    "backend.service:Project": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:31:30Z",
+      "files": [
+        "src/services/projectService.ts"
+      ],
+      "templateId": "backend.service"
+    },
+    "backend.controller:Project": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:31:35Z",
+      "files": [
+        "src/controllers/projectController.ts"
+      ],
+      "templateId": "backend.controller"
+    },
+    "backend.express:Project": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:31:40Z",
+      "files": [
+        "src/routes/projectRoutes.ts",
+        "src/app.ts"
+      ],
+      "templateId": "backend.express"
+    },
+    "api.crud:Project": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:31:45Z",
+      "files": [
+        "src/repository/Project.ts"
+      ],
+      "templateId": "api.crud"
+    },
+    "devops.docker": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:31:50Z",
+      "files": [
+        "Dockerfile",
+        ".dockerignore",
+        "docker-compose.yml"
+      ],
+      "templateId": "devops.docker"
+    },
+    "devops.github-actions": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:31:55Z",
+      "files": [
+        ".github/workflows/ci.yml"
+      ],
+      "templateId": "devops.github-actions"
+    },
+    "testing.unit": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:32:00Z",
+      "files": [
+        "vitest.config.ts"
+      ],
+      "templateId": "testing.unit"
+    },
+    "testing.integration": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:32:05Z",
+      "files": [
+        "tests/setup/integration.setup.ts"
+      ],
+      "templateId": "testing.integration"
+    },
+    "testing.api": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:32:10Z",
+      "files": [],
+      "templateId": "testing.api"
+    },
+    "documentation.setup": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:32:15Z",
+      "files": [
+        "docs/SETUP.md"
+      ],
+      "templateId": "documentation.setup"
+    },
+    "documentation.api": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:32:20Z",
+      "files": [
+        "docs/API.md"
+      ],
+      "templateId": "documentation.api"
+    },
+    "documentation.architecture": {
+      "version": "1.0.0",
+      "generatedAt": "2026-02-03T09:32:25Z",
+      "files": [
+        "docs/ARCHITECTURE.md"
+      ],
+      "templateId": "documentation.architecture"
+    }
+  },
+  "schemaVersion": "2.0.0"
 }

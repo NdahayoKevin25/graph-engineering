@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "target",
+    "generatedAt",
+    "serviceName",
+    "imageUri",
+    "port",
+    "executionRoleArn",
+    "infrastructureRoleArn",
+    "taskRoleArn",
+    "subnetIds",
+    "securityGroupIds",
+    "secrets",
+    "acknowledgeUnverifiedAwsPrerequisites"
+  ],
+  "properties": {
+    "target": { "const": "ecs-express" },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "serviceName": { "type": "string" },
+    "imageUri": { "type": "string" },
+    "port": { "type": "integer" },
+    "executionRoleArn": { "type": "string" },
+    "infrastructureRoleArn": { "type": "string" },
+    "taskRoleArn": { "type": "string" },
+    "subnetIds": { "type": "array", "items": { "type": "string" } },
+    "securityGroupIds": { "type": "array", "items": { "type": "string" } },
+    "secrets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "valueFrom"],
+        "properties": {
+          "name": { "type": "string" },
+          "valueFrom": { "type": "string" }
+        }
+      }
+    },
+    "acknowledgeUnverifiedAwsPrerequisites": { "const": true },
+    "mainBranch": { "type": "string", "default": "dev" },
+    "includeMigrations": { "type": "boolean", "default": false },
+    "migrationEnvironment": { "type": "string" }
+  }
+}

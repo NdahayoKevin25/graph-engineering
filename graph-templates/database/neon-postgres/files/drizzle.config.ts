@@ -1,16 +1,11 @@
 import { defineConfig } from 'drizzle-kit';
-import { config } from 'dotenv';
 
-config();
-config({ path: '.env.local' });
-
+// Generation is offline. This config intentionally contains no database credentials.
+// Apply reviewed SQL only through the explicitly guarded dbMigrate runner.
 export default defineConfig({
   schema: './src/config/schema.ts',
   out: './src/migrations',
-  dbCredentials: {
-    url: process.env.NEON_DATABASE_URL ?? process.env.DATABASE_URL!,
-  },
   dialect: 'postgresql',
-  verbose: true,
+  verbose: false,
   strict: true,
 });

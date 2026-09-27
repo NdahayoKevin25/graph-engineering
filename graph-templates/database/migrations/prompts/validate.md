@@ -1,1 +1,1 @@
-file-exists `src/migrations/README.md` → run `npx drizzle-kit generate` and confirm no new file was created (schema/migrations in sync). A new file appearing means a `backend.repository` change wasn't followed by `npm run dbGenerate`.
+In the approved offline fixture, generate actual SQL, compile, migrate twice, verify history hashes, demonstrate failed transaction rollback and unchanged-schema generation. Do not equate README presence, generation success or failure rollback with a reversible/down migration lifecycle.

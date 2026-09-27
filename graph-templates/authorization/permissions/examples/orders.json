@@ -1,0 +1,3 @@
+{
+  "permissions": ["orders:refund", "products:delete"]
+}

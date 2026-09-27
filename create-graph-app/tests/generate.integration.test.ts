@@ -17,9 +17,6 @@ afterEach(() => {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 });
 
-function exists(...segments: string[]): boolean {
-  return fs.existsSync(path.join(tmpRoot, ...segments));
-}
 
 describe('generate(): Next.js + Zustand + shadcn (frontend-only, brief §28)', () => {
   it('produces a single-app frontend layout with no apps/ nesting and no backend files', () => {

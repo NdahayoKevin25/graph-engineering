@@ -1,7 +1,7 @@
 {
   "$schema": "template-registry.schema.json",
-  "generatedAt": "2026-09-17T21:08:07.249Z",
-  "templateCount": 55,
+  "generatedAt": "2026-09-27T05:19:52.905Z",
+  "templateCount": 56,
   "templates": [
     {
       "id": "api.crud",
@@ -56,6 +56,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "api",
+        "location": "tests/{{input.entityName}}CrudFiltering.test.ts",
+        "command": "npm test -- CrudFiltering"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.error-handler",
@@ -94,6 +99,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "n/a",
+        "command": "n/a"
+      },
       "compatibleNodes": [
         "api.crud"
       ],
@@ -125,6 +135,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "n/a",
+        "command": "n/a"
+      },
       "compatibleNodes": [
         "backend.pagination",
         "api.crud"
@@ -133,32 +148,75 @@
     },
     {
       "id": "api.search",
-      "name": "Full-Text / Fuzzy Search",
-      "version": "0.1.0",
+      "name": "PostgreSQL Full-Text Search",
+      "version": "1.0.0",
       "category": "api",
       "subcategory": "search",
-      "status": "planned",
-      "description": "Genuinely distinct future capability (Postgres tsvector/pg_trgm full-text or fuzzy search across one or more entities) — not implemented; not faked as a thin wrapper over api.crud's exact-match filtering, which it is not a substitute for. Planned: a search index column/migration, a query-parsing node analogous to backend.pagination, and a ranked-results response shape distinct from api.schema.json's plain route list.",
+      "status": "implemented",
+      "description": "Adds a PostgreSQL English full-text GIN expression index declaration and a bounded authMiddleware-gated ranked search endpoint for one existing reviewed Drizzle table. Query text and pagination are bound PostgreSQL parameters; no user-supplied identifier or sort expression reaches SQL. The index still requires a separately generated, reviewed and applied migration.",
       "tags": [
         "api",
         "search",
-        "crud",
+        "pg",
+        "drizzle-orm",
+        "express",
+        "vitest",
+        "supertest",
+        "auth",
         "postgres",
+        "drizzle",
         "pagination",
-        "filtering",
         "migration"
       ],
-      "inputs": [],
-      "outputs": [],
+      "inputs": [
+        "entityName",
+        "tableName",
+        "searchFields"
+      ],
+      "outputs": [
+        "files",
+        "routes",
+        "exports",
+        "searchFields",
+        "indexName",
+        "migrationRequired"
+      ],
       "dependsOn": [
         {
           "id": "database.neon-postgres.connection",
           "relationship": "requires"
+        },
+        {
+          "id": "backend.repository",
+          "relationship": "requires"
+        },
+        {
+          "id": "backend.middleware",
+          "relationship": "requires"
+        },
+        {
+          "id": "authentication.jwt",
+          "relationship": "requires"
+        },
+        {
+          "id": "database.migrations",
+          "relationship": "extends"
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "integration",
+        "location": "tests/{{input.entityNameCamel}}Search.test.ts",
+        "command": "npm test -- Search"
+      },
       "compatibleNodes": [
-        "database.neon-postgres.connection"
+        "database.neon-postgres.connection",
+        "backend.repository",
+        "backend.middleware",
+        "authentication.jwt",
+        "documentation.api",
+        "testing.api",
+        "database.migrations"
       ],
       "path": "api/search"
     },
@@ -184,6 +242,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "n/a",
+        "command": "n/a"
+      },
       "compatibleNodes": [
         "api.crud"
       ],
@@ -191,29 +254,55 @@
     },
     {
       "id": "api.webhooks",
-      "name": "Inbound Webhook Receiver",
-      "version": "0.1.0",
+      "name": "Fixed-Profile Inbound HMAC Webhook",
+      "version": "1.0.0",
       "category": "api",
       "subcategory": "webhooks",
-      "status": "planned",
-      "description": "Genuinely distinct future capability — an inbound webhook route needs signature verification (e.g. HMAC against a provider secret), raw-body parsing (before express.json() consumes the stream, which most webhook signature schemes require), and idempotency-key deduplication, none of which api.crud provides or should be stretched to provide. Planned: a provider-agnostic verifyAndParseWebhook(secret, rawBody, signatureHeader) helper plus a route scaffold, aligned with integrations.webhooks (integrations/ category, also planned).",
+      "status": "implemented",
+      "description": "Generates one bounded generic HMAC-SHA256 inbound endpoint. The signature covers a strict timestamp, delivery ID, and exact raw JSON bytes before an application-owned durable atomic inbox accepts the delivery. This profile does not claim compatibility with arbitrary third-party webhook schemes or implement the application's event processor.",
       "tags": [
         "api",
         "webhooks",
-        "crud",
+        "express",
+        "supertest",
+        "vitest",
         "webhook"
       ],
       "inputs": [],
-      "outputs": [],
+      "outputs": [
+        "files",
+        "exports",
+        "routes"
+      ],
       "dependsOn": [
         {
           "id": "project.node-express",
           "relationship": "requires"
+        },
+        {
+          "id": "backend.error-handler",
+          "relationship": "requires"
         }
       ],
-      "environment": [],
+      "environment": [
+        {
+          "name": "WEBHOOK_HMAC_SECRET",
+          "required": true,
+          "secret": true,
+          "description": "32 CSPRNG bytes encoded as 64 lowercase hexadecimal characters; never a default or test key.",
+          "usedBy": [
+            "api.webhooks"
+          ]
+        }
+      ],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/webhookRoutes.test.ts",
+        "command": "npm test -- webhookRoutes"
+      },
       "compatibleNodes": [
-        "project.node-express"
+        "project.node-express",
+        "backend.error-handler"
       ],
       "path": "api/webhooks"
     },
@@ -270,11 +359,17 @@
           ]
         }
       ],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/authMiddleware.test.ts",
+        "command": "npm test -- authMiddleware"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.error-handler",
         "backend.middleware",
         "authentication.password",
+        "authentication.oauth",
         "backend.express",
         "authorization.rbac",
         "authorization.tenant-isolation"
@@ -283,31 +378,128 @@
     },
     {
       "id": "authentication.oauth",
-      "name": "OAuth2 Login (Google/GitHub)",
-      "version": "0.1.0",
+      "name": "OAuth2 / OIDC Login (Google, GitHub, generic OIDC)",
+      "version": "1.0.0",
       "category": "authentication",
       "subcategory": "oauth",
-      "status": "planned",
-      "description": "Third-party OAuth2 login (Google/GitHub, etc.). Not yet implemented in this library. Once built, it would extend authentication.jwt rather than replace it: after a successful OAuth callback, it issues the same access/refresh tokens authentication.jwt already defines, skipping password verification entirely for that login path.",
+      "status": "implemented",
+      "description": "Third-party sign-in through the OAuth 2.0 authorization-code flow with PKCE (S256), with ready presets for Google (OIDC) and GitHub and one generic OIDC provider configured by static HTTPS endpoints. OIDC ID token signatures are verified (RS256 or ES256) against the provider's JWKS before any claim is trusted. It extends authentication.jwt rather than replacing it: after a successful callback it issues the same access/refresh tokens authentication.jwt defines. A login may create a new account, but only for a provider-verified email address that no account uses. A first-time login whose verified email already belongs to an account is refused by default; the owner signs in the usual way and links the provider through the authenticated POST /api/auth/oauth/:provider/link flow, which requires the provider-verified email to equal the account's email. The per-provider linkVerifiedEmailToExistingAccount input restores automatic linking as a documented risk. Provider identities are stored as provider + provider subject id in an oauth_accounts table; users themselves stay behind an application-owned account directory adapter.",
       "tags": [
         "authentication",
         "oauth",
         "auth",
         "jwt",
-        "refresh",
-        "password"
+        "ci",
+        "refresh"
       ],
-      "inputs": [],
-      "outputs": [],
+      "inputs": [
+        "providers",
+        "postLoginRedirects",
+        "linkVerifiedEmailToExistingAccount",
+        "oidc"
+      ],
+      "outputs": [
+        "files",
+        "exports",
+        "routes"
+      ],
       "dependsOn": [
         {
           "id": "authentication.jwt",
-          "relationship": "extends"
+          "relationship": "requires"
+        },
+        {
+          "id": "backend.error-handler",
+          "relationship": "requires"
+        },
+        {
+          "id": "backend.middleware",
+          "relationship": "requires"
+        },
+        {
+          "id": "database.neon-postgres.connection",
+          "relationship": "requires"
         }
       ],
-      "environment": [],
+      "environment": [
+        {
+          "name": "OAUTH_REDIRECT_BASE_URL",
+          "required": true,
+          "secret": false,
+          "description": "Public HTTPS origin of this API (http://localhost allowed outside production). Each provider's registered redirect URI is exactly <origin>/api/auth/oauth/<provider>/callback.",
+          "usedBy": [
+            "authentication.oauth"
+          ]
+        },
+        {
+          "name": "GOOGLE_OAUTH_CLIENT_ID",
+          "required": true,
+          "secret": false,
+          "description": "Google OAuth client id. Required only when providers includes google.",
+          "usedBy": [
+            "authentication.oauth"
+          ]
+        },
+        {
+          "name": "GOOGLE_OAUTH_CLIENT_SECRET",
+          "required": true,
+          "secret": true,
+          "description": "Google OAuth client secret; no default. Required only when providers includes google.",
+          "usedBy": [
+            "authentication.oauth"
+          ]
+        },
+        {
+          "name": "GITHUB_OAUTH_CLIENT_ID",
+          "required": true,
+          "secret": false,
+          "description": "GitHub OAuth app client id. Required only when providers includes github.",
+          "usedBy": [
+            "authentication.oauth"
+          ]
+        },
+        {
+          "name": "GITHUB_OAUTH_CLIENT_SECRET",
+          "required": true,
+          "secret": true,
+          "description": "GitHub OAuth app client secret; no default. Required only when providers includes github.",
+          "usedBy": [
+            "authentication.oauth"
+          ]
+        },
+        {
+          "name": "OIDC_CLIENT_ID",
+          "required": true,
+          "secret": false,
+          "description": "Generic OIDC client id. Required only when providers includes oidc.",
+          "usedBy": [
+            "authentication.oauth"
+          ]
+        },
+        {
+          "name": "OIDC_CLIENT_SECRET",
+          "required": true,
+          "secret": true,
+          "description": "Generic OIDC client secret; no default. Required only when providers includes oidc.",
+          "usedBy": [
+            "authentication.oauth"
+          ]
+        }
+      ],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/authenticationOauth.test.ts",
+        "command": "npm test -- authenticationOauth"
+      },
       "compatibleNodes": [
-        "authentication.jwt"
+        "authentication.jwt",
+        "authentication.password",
+        "database.neon-postgres.connection",
+        "backend.error-handler",
+        "backend.middleware",
+        "authorization.rbac",
+        "authorization.tenant-isolation",
+        "authorization.permissions"
       ],
       "path": "authentication/oauth"
     },
@@ -371,6 +563,11 @@
           ]
         }
       ],
+      "testing": {
+        "strategy": "api",
+        "location": "tests/authentication.test.ts",
+        "command": "npm test -- authentication"
+      },
       "compatibleNodes": [
         "authentication.jwt",
         "database.neon-postgres.connection",
@@ -386,56 +583,159 @@
     {
       "id": "authentication.session",
       "name": "Server-Side Session Authentication",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "category": "authentication",
       "subcategory": "session",
-      "status": "planned",
-      "description": "Server-side session-store alternative to authentication.jwt — trades the stateless JWT's \"no revocation before expiry\" tradeoff for instant revocation, at the cost of requiring a session store (e.g. Redis) and making every request a store lookup. Not yet implemented in this library; registered so the graph documents the gap. Prefer authentication.jwt unless instant session revocation is a hard requirement.",
+      "status": "implemented",
+      "description": "Server-side session authentication with instant revocation: an opaque 256-bit session id in an httpOnly cookie, the session record held in a pluggable SessionStore (development memory store, PostgreSQL store on the existing Drizzle connection, or a custom shared store such as Redis), server-enforced idle and absolute timeouts, id regeneration on login and privilege change, per-session synchronizer-token CSRF protection, and password verification through authentication.password's bcrypt repository. Trades the stateless JWT's \"no revocation before expiry\" for a store lookup on every authenticated request.",
       "tags": [
         "authentication",
         "session",
         "auth",
-        "jwt"
+        "jwt",
+        "postgres",
+        "drizzle",
+        "password"
       ],
-      "inputs": [],
-      "outputs": [],
-      "dependsOn": [],
-      "environment": [],
+      "inputs": [
+        "idleTimeout",
+        "absoluteTimeout"
+      ],
+      "outputs": [
+        "files",
+        "exports",
+        "routes"
+      ],
+      "dependsOn": [
+        {
+          "id": "authentication.password",
+          "relationship": "requires"
+        },
+        {
+          "id": "backend.error-handler",
+          "relationship": "requires"
+        },
+        {
+          "id": "backend.middleware",
+          "relationship": "requires"
+        },
+        {
+          "id": "database.neon-postgres.connection",
+          "relationship": "requires"
+        }
+      ],
+      "environment": [
+        {
+          "name": "SESSION_SECRET",
+          "required": true,
+          "secret": true,
+          "description": "HMAC key for session store lookup keys. No default: at least 32 bytes of cryptographically random material.",
+          "usedBy": [
+            "authentication.session"
+          ]
+        },
+        {
+          "name": "SESSION_STORE",
+          "required": false,
+          "secret": false,
+          "description": "memory (default, development only, refused when NODE_ENV=production), postgres, or custom (call configureSessionStore at startup).",
+          "usedBy": [
+            "authentication.session"
+          ]
+        },
+        {
+          "name": "SESSION_IDLE_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "description": "Idle timeout in seconds, 60 through 86400; defaults to the rendered idleTimeout input.",
+          "usedBy": [
+            "authentication.session"
+          ]
+        },
+        {
+          "name": "SESSION_ABSOLUTE_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "description": "Absolute session lifetime in seconds, 3600 through 2592000; defaults to the rendered absoluteTimeout input.",
+          "usedBy": [
+            "authentication.session"
+          ]
+        },
+        {
+          "name": "SESSION_COOKIE_SECURE",
+          "required": false,
+          "secret": false,
+          "description": "true by default. false is accepted only for local HTTP development and refused when NODE_ENV=production.",
+          "usedBy": [
+            "authentication.session"
+          ]
+        }
+      ],
+      "testing": {
+        "strategy": "api",
+        "location": "tests/session.test.ts",
+        "command": "npm test -- authenticationSession"
+      },
       "compatibleNodes": [
-        "project.node-express",
-        "authorization.rbac"
+        "authentication.password",
+        "database.neon-postgres.connection",
+        "backend.error-handler",
+        "backend.middleware",
+        "authorization.rbac",
+        "authorization.tenant-isolation"
       ],
       "path": "authentication/session"
     },
     {
       "id": "authorization.permissions",
-      "name": "Permission Matrix",
-      "version": "0.1.0",
+      "name": "Granular Permission Gate",
+      "version": "1.0.0",
       "category": "authorization",
       "subcategory": "permissions",
-      "status": "planned",
-      "description": "A granular resource:action permission-matrix alternative/extension to authorization.rbac's fixed role list — e.g. `products:delete`, `orders:refund` as individually grantable permissions rather than baking everything into a small role enum. Not yet implemented in this library.",
+      "status": "implemented",
+      "description": "Generates a default-deny resource:action permission gate over a bounded, reviewed permission vocabulary. An application-owned hasPermission adapter resolves each authenticated user's current grants from durable trusted data. This node does not invent grant storage, grant-management endpoints, or route policy; the application must provide and review those separately.",
       "tags": [
         "authorization",
         "permissions",
+        "express",
+        "vitest",
         "auth",
-        "rbac",
-        "delete",
-        "permission",
-        "role"
+        "storage",
+        "permission"
       ],
-      "inputs": [],
-      "outputs": [],
+      "inputs": [
+        "permissions"
+      ],
+      "outputs": [
+        "files",
+        "exports"
+      ],
       "dependsOn": [
+        {
+          "id": "authentication.jwt",
+          "relationship": "requires"
+        },
+        {
+          "id": "backend.error-handler",
+          "relationship": "requires"
+        },
         {
           "id": "authorization.rbac",
           "relationship": "extends"
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/permissionMiddleware.test.ts",
+        "command": "npm test -- permissionMiddleware"
+      },
       "compatibleNodes": [
         "authentication.jwt",
-        "authorization.rbac"
+        "authorization.rbac",
+        "backend.error-handler",
+        "backend.express",
+        "api.crud"
       ],
       "path": "authorization/permissions"
     },
@@ -470,6 +770,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/rbacMiddleware.test.ts",
+        "command": "npm test -- rbacMiddleware"
+      },
       "compatibleNodes": [
         "authentication.jwt",
         "backend.error-handler",
@@ -481,36 +786,75 @@
     {
       "id": "authorization.roles",
       "name": "Dynamic Role Definitions",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "category": "authorization",
       "subcategory": "roles",
-      "status": "planned",
-      "description": "Application-defined, runtime-configurable roles (a roles table + role assignment) as opposed to authorization.rbac's hardcoded customer/admin enum — for applications that need to let an admin create new roles without a code change/migration. Not yet implemented in this library.",
+      "status": "implemented",
+      "description": "Application-defined, runtime-configurable roles: roles, user_roles, role_permissions and an append-only role_audit_log table, a repository and service, admin-only management routes (create, rename and delete roles, assign and revoke them, grant and revoke resource:action permissions, read the audit log) and requireAssignedRole/requireAssignedPermission middleware that read the caller's current roles from the database on every request. Unlike authorization.rbac's fixed customer/admin enum (and its requireRole, which reads users.role), an administrator can add roles without a code change. The JWT role claim is never used for these decisions.",
       "tags": [
         "authorization",
         "roles",
+        "express",
+        "drizzle-orm",
+        "zod",
+        "supertest",
+        "vitest",
         "auth",
+        "jwt",
+        "ci",
         "rbac",
-        "migration",
+        "delete",
+        "permission",
         "role"
       ],
       "inputs": [],
-      "outputs": [],
+      "outputs": [
+        "files",
+        "exports",
+        "routes"
+      ],
       "dependsOn": [
         {
-          "id": "authorization.rbac",
-          "relationship": "extends"
+          "id": "authentication.jwt",
+          "relationship": "requires"
+        },
+        {
+          "id": "authentication.password",
+          "relationship": "requires"
         },
         {
           "id": "database.neon-postgres.connection",
           "relationship": "requires"
+        },
+        {
+          "id": "backend.error-handler",
+          "relationship": "requires"
+        },
+        {
+          "id": "backend.middleware",
+          "relationship": "requires"
+        },
+        {
+          "id": "database.migrations",
+          "relationship": "recommends"
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/roleMiddleware.test.ts",
+        "command": "npm test -- roleMiddleware roleService roleRoutes roleRepository"
+      },
       "compatibleNodes": [
         "authentication.jwt",
+        "authentication.password",
         "database.neon-postgres.connection",
-        "authorization.rbac"
+        "backend.error-handler",
+        "backend.middleware",
+        "authorization.permissions",
+        "backend.express",
+        "api.crud",
+        "database.migrations"
       ],
       "path": "authorization/roles"
     },
@@ -541,6 +885,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/tenantMiddleware.test.ts",
+        "command": "npm test -- tenantMiddleware"
+      },
       "compatibleNodes": [
         "authentication.jwt",
         "backend.repository",
@@ -573,6 +922,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/apiResponse.test.ts",
+        "command": "npm test -- apiResponse"
+      },
       "compatibleNodes": [
         "project.node-express",
         "backend.error-handler",
@@ -621,6 +975,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "api",
+        "location": "tests/{{input.entityName}}Controller.test.ts",
+        "command": "npm test -- {{input.entityName}}Controller"
+      },
       "compatibleNodes": [
         "backend.service",
         "backend.api-response",
@@ -656,6 +1015,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/errorHandler.test.ts",
+        "command": "npm test -- errorHandler"
+      },
       "compatibleNodes": [
         "project.node-express",
         "backend.service",
@@ -700,6 +1064,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "api",
+        "location": "tests/{{input.entityName}}Routes.test.ts",
+        "command": "npm test -- {{input.entityName}}Routes"
+      },
       "compatibleNodes": [
         "backend.controller",
         "authentication.jwt",
@@ -732,6 +1101,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/asyncHandler.test.ts",
+        "command": "npm test -- asyncHandler"
+      },
       "compatibleNodes": [
         "backend.error-handler",
         "backend.controller",
@@ -768,6 +1142,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/pagination.test.ts",
+        "command": "npm test -- pagination"
+      },
       "compatibleNodes": [
         "project.node-express",
         "backend.controller",
@@ -813,6 +1192,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/{{input.entityName}}Repository.test.ts",
+        "command": "npm test -- {{input.entityName}}Repository"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.error-handler",
@@ -854,6 +1238,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/{{input.entityName}}Service.test.ts",
+        "command": "npm test -- {{input.entityName}}Service"
+      },
       "compatibleNodes": [
         "backend.repository",
         "backend.error-handler",
@@ -889,6 +1278,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/validationMiddleware.test.ts",
+        "command": "npm test -- validationMiddleware"
+      },
       "compatibleNodes": [
         "backend.error-handler",
         "backend.express",
@@ -904,13 +1298,14 @@
       "category": "database",
       "subcategory": "migrations",
       "status": "implemented",
-      "description": "Not a code-generating node — this documents and guards the drizzle-kit migration workflow that database.neon-postgres.connection's npm scripts (dbGenerate/dbMigrate) drive. Ensures src/migrations/ exists with a README explaining the workflow so an agent never hand-writes migration SQL.",
+      "description": "Generates a guarded Drizzle migration runner with an explicit separate URL, expected database name, acknowledgement and advisory lock. Validates applied migration hashes before applying pending SQL transactionally. This is not an automatic inverse/down-migration generator.",
       "tags": [
         "database",
         "migrations",
-        "postgres",
         "drizzle",
-        "migration"
+        "ci",
+        "migration",
+        "transaction"
       ],
       "inputs": [],
       "outputs": [
@@ -923,6 +1318,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "integration",
+        "location": "tests/migrations.test.ts",
+        "command": "npm test -- migrations"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.repository",
@@ -937,16 +1337,16 @@
       "category": "database",
       "subcategory": "neon-postgres",
       "status": "implemented",
-      "description": "The Neon serverless Postgres connection layer, taken directly from the reference app's src/config/database.ts and drizzle.config.ts: a WebSocket- backed Pool wrapped by drizzle-orm's neon-serverless driver, plus the base (table-free) schema.ts that backend.repository nodes append pgTable definitions to, and drizzle-kit configuration for migrations.",
+      "description": "A bounded standard PostgreSQL pool for persistent Node24 processes, including Neon, using pg and Drizzle with certificate verification. Includes explicit operation URL guards and credential-free offline migration generation.",
       "tags": [
         "database",
         "neon-postgres",
-        "serverless",
+        "pg",
         "drizzle-orm",
-        "ws",
         "drizzle-kit",
         "postgres",
         "drizzle",
+        "ci",
         "migration"
       ],
       "inputs": [],
@@ -965,12 +1365,17 @@
           "name": "DATABASE_URL",
           "required": true,
           "secret": true,
-          "description": "Neon pooled Postgres connection string. Accepts NEON_DATABASE_URL as an alias, matching the reference app's convention.",
+          "description": "Explicit standard PostgreSQL URL. No alias fallback; TLS certificates are verified for remote targets.",
           "usedBy": [
             "database.neon-postgres.connection"
           ]
         }
       ],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/database-connection.test.ts",
+        "command": "npm test -- database-connection"
+      },
       "compatibleNodes": [
         "project.node-express",
         "backend.repository",
@@ -987,10 +1392,13 @@
       "category": "database",
       "subcategory": "seed",
       "status": "implemented",
-      "description": "Generates a standalone src/scripts/seed.ts that inserts example rows for one or more entities backend.repository created, runnable via `npm run seed`. Refuses to run when NODE_ENV is production, since a seed script is a destructive/idempotent-unsafe operation that must never touch a live database.",
+      "description": "Generates a standalone src/scripts/seed.ts that inserts example rows for one or more entities backend.repository created, runnable via `npm run seed`. Requires an explicitly acknowledged isolated loopback development/test database with a separate URL. Inserts all rows transactionally into empty targets, refusing existing data rather than silently duplicating or replacing it.",
       "tags": [
         "database",
-        "seed"
+        "seed",
+        "ci",
+        "test",
+        "transaction"
       ],
       "inputs": [
         "entities"
@@ -1009,6 +1417,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "integration",
+        "location": "tests/seed.test.ts",
+        "command": "npm test -- seed"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.repository",
@@ -1043,6 +1456,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/withTransaction.test.ts",
+        "command": "npm test -- withTransaction"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.repository"
@@ -1051,20 +1469,34 @@
     },
     {
       "id": "devops.aws",
-      "name": "AWS Deployment (ECS / App Runner / Lambda)",
-      "version": "0.1.0",
+      "name": "AWS ECS Express Mode Descriptor",
+      "version": "1.0.0",
       "category": "devops",
       "subcategory": "aws",
-      "status": "planned",
-      "description": "Planned. Deploys the devops.docker image to an AWS compute target (ECS Fargate, App Runner, or Lambda via a container image) — not yet implemented. A future implementation should reuse devops.docker's image unmodified and add only the target-specific deploy manifest (task definition, apprunner.yaml, or Lambda container config), not a parallel Dockerfile.",
+      "status": "implemented",
+      "description": "Offline-only, reviewed CreateExpressGatewayService request JSON for an existing digest-pinned private ECR image built from devops.docker. It records explicit IAM roles, VPC IDs, container port and ARN-only secret references; generation makes no AWS call and does not create or deploy any resource.",
       "tags": [
         "devops",
         "aws",
         "docker",
-        "ci"
+        "ci",
+        "role"
       ],
-      "inputs": [],
-      "outputs": [],
+      "inputs": [
+        "serviceName",
+        "imageUri",
+        "port",
+        "executionRoleArn",
+        "infrastructureRoleArn",
+        "taskRoleArn",
+        "subnetIds",
+        "securityGroupIds",
+        "secrets",
+        "acknowledgeUnverifiedAwsPrerequisites"
+      ],
+      "outputs": [
+        "files"
+      ],
       "dependsOn": [
         {
           "id": "devops.docker",
@@ -1072,6 +1504,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "packages/engine/tests/template-runtime-aws.test.ts",
+        "command": "npm test -- tests/template-runtime-aws.test.ts"
+      },
       "compatibleNodes": [
         "devops.docker",
         "devops.github-actions"
@@ -1080,21 +1517,38 @@
     },
     {
       "id": "devops.deployment",
-      "name": "Deployment Orchestrator",
-      "version": "0.1.0",
+      "name": "ECS Express Deployment Plan",
+      "version": "1.0.0",
       "category": "devops",
       "subcategory": "deployment",
-      "status": "planned",
-      "description": "Planned. A higher-level composition node analogous to api.crud — given a target (docker/serverless/vm), invokes devops.docker + devops.github-actions + a target-specific node (e.g. devops.aws, also planned) in the right order and reconciles their combined output into one deployment.schema.json. Not yet implemented; devops.docker and devops.github-actions are usable independently in the meantime.",
+      "status": "implemented",
+      "description": "Offline-only ECS Express Mode composition of the audited Docker, build/test GitHub Actions and private AWS request renderers. Requires the reviewed Dockerfile to be applied first; emits a public, sanitized deployment schema plus the private AWS descriptor without building or deploying anything.",
       "tags": [
         "devops",
         "deployment",
-        "crud",
         "docker",
-        "ci"
+        "test"
       ],
-      "inputs": [],
-      "outputs": [],
+      "inputs": [
+        "target",
+        "generatedAt",
+        "serviceName",
+        "imageUri",
+        "port",
+        "executionRoleArn",
+        "infrastructureRoleArn",
+        "taskRoleArn",
+        "subnetIds",
+        "securityGroupIds",
+        "secrets",
+        "acknowledgeUnverifiedAwsPrerequisites",
+        "mainBranch",
+        "includeMigrations",
+        "migrationEnvironment"
+      ],
+      "outputs": [
+        "files"
+      ],
       "dependsOn": [
         {
           "id": "devops.docker",
@@ -1106,10 +1560,15 @@
         },
         {
           "id": "devops.aws",
-          "relationship": "extends"
+          "relationship": "requires"
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "packages/engine/tests/template-runtime-deployment.test.ts",
+        "command": "npm test -- tests/template-runtime-deployment.test.ts"
+      },
       "compatibleNodes": [
         "devops.docker",
         "devops.github-actions",
@@ -1124,7 +1583,7 @@
       "category": "devops",
       "subcategory": "docker",
       "status": "implemented",
-      "description": "A multi-stage Dockerfile (build stage compiles TypeScript, slim node:alpine runtime stage ships only dist/ + production node_modules), .dockerignore, and a docker-compose.yml for local runs. Targets Neon serverless Postgres (no bundled Postgres container) and S3-compatible object storage, matching the reference stack — the runtime image never contains source TypeScript, dev dependencies, or .env files.",
+      "description": "A multi-stage Dockerfile (build stage compiles TypeScript, slim Node 24 Debian runtime stage ships only dist/ + production node_modules), .dockerignore, and a docker-compose.yml for local runs. Targets Neon serverless Postgres (no bundled Postgres container) and S3-compatible object storage, matching the reference stack — the runtime image never contains source TypeScript, dev dependencies, or .env files.",
       "tags": [
         "devops",
         "docker",
@@ -1147,6 +1606,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "project.node-express",
         "database.neon-postgres.connection",
@@ -1175,6 +1639,11 @@
       ],
       "dependsOn": [],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "project.node-express",
         "database.neon-postgres.connection",
@@ -1193,7 +1662,7 @@
       "category": "devops",
       "subcategory": "github-actions",
       "status": "implemented",
-      "description": "A CI workflow (build + test on every PR/push to main) plus a separately workflow_dispatch-gated job for applying database migrations — migrations are never auto-applied on a merge, only on an explicit manual trigger, so a bad migration can't ride along with an unrelated code change.",
+      "description": "A CI workflow (build + test on every PR/push to dev by default) plus an opt-in workflow_dispatch-gated job for applying database migrations — migrations are never auto-applied on a merge, only on an explicit manual trigger, so a bad migration can't ride along with an unrelated code change.",
       "tags": [
         "devops",
         "github-actions",
@@ -1203,7 +1672,9 @@
       ],
       "inputs": [
         "nodeVersion",
-        "mainBranch"
+        "mainBranch",
+        "includeMigrations",
+        "migrationEnvironment"
       ],
       "outputs": [
         "files"
@@ -1227,6 +1698,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "project.node-express",
         "devops.docker",
@@ -1256,6 +1732,11 @@
       ],
       "dependsOn": [],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [],
       "path": "documentation/agent-context"
     },
@@ -1285,6 +1766,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "api.crud",
         "backend.express",
@@ -1311,6 +1797,11 @@
       ],
       "dependsOn": [],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "documentation.agent-context"
       ],
@@ -1337,6 +1828,11 @@
       ],
       "dependsOn": [],
       "environment": [],
+      "testing": {
+        "strategy": "none",
+        "location": "",
+        "command": ""
+      },
       "compatibleNodes": [
         "project.node-express"
       ],
@@ -1375,6 +1871,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/AuthContext.test.tsx",
+        "command": "npm test -- AuthContext"
+      },
       "compatibleNodes": [
         "frontend.nextjs",
         "authentication.password",
@@ -1385,12 +1886,12 @@
     },
     {
       "id": "frontend.dashboards",
-      "name": "Dashboard Layout",
-      "version": "0.1.0",
+      "name": "Dashboard Composition",
+      "version": "1.0.0",
       "category": "frontend",
       "subcategory": "dashboards",
-      "status": "planned",
-      "description": "Planned. A dashboard shell (sidebar nav gated by useAuth's user.role, stat tiles, a page layout composing frontend.tables' DataTable + frontend.forms' useFormState for settings/profile forms) — the natural next composition once frontend.authentication + frontend.tables + frontend.forms exist individually. Not yet implemented: it's a composition of already-implemented pieces rather than new primitives, so it's lower priority than the pieces it would compose.",
+      "status": "implemented",
+      "description": "A reusable authenticated dashboard composition: display-only role-filtered navigation, caller-supplied stat tiles, an optional table built on frontend.tables, and an optional profile form built on frontend.forms. Applications supply their own reviewed table path, rows, statistics and profile-save callback. No stats or profile endpoint is assumed or created.",
       "tags": [
         "frontend",
         "dashboards",
@@ -1398,7 +1899,10 @@
         "role"
       ],
       "inputs": [],
-      "outputs": [],
+      "outputs": [
+        "files",
+        "exports"
+      ],
       "dependsOn": [
         {
           "id": "frontend.authentication",
@@ -1414,6 +1918,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/Dashboard.test.tsx",
+        "command": "npm test -- Dashboard"
+      },
       "compatibleNodes": [
         "frontend.authentication",
         "frontend.tables",
@@ -1446,6 +1955,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/useFormState.test.tsx",
+        "command": "npm test -- useFormState"
+      },
       "compatibleNodes": [
         "frontend.nextjs",
         "frontend.authentication",
@@ -1479,6 +1993,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/apiClient.test.ts",
+        "command": "npm test -- apiClient"
+      },
       "compatibleNodes": [
         "project.nextjs",
         "frontend.authentication",
@@ -1490,24 +2009,35 @@
     },
     {
       "id": "frontend.react",
-      "name": "Plain React (Vite) Project Scaffold",
-      "version": "0.1.0",
+      "name": "Typed API Client for Vite React",
+      "version": "1.0.0",
       "category": "frontend",
       "subcategory": "react",
-      "status": "planned",
-      "description": "Planned. A non-Next.js React SPA scaffold (Vite + React + TypeScript) for projects that want a pure client-rendered app instead of Next.js's App Router/SSR (e.g. an internal admin tool with no SEO/SSR requirement). Would need its own project.* root node (project.vite-react, not yet registered) since it has a different build tool and routing story than project.nextjs — frontend.forms/frontend.tables's hooks are framework-agnostic React and would likely be reusable as-is; frontend.nextjs's apiClient has no Next.js-specific code either, so a future frontend.react node may turn out to just be \"frontend.nextjs's apiClient, renamed and duplicated\" rather than new code — worth checking before implementing to avoid needless duplication.",
+      "status": "implemented",
+      "description": "Adds the audited typed API client to a project.vite-react application. The client shares frontend.nextjs's framework-independent apiFetch implementation: bounded /api/ paths, included cookie credentials, safe status errors and limited JSON requests and responses. This node does not add routing, login pages, forms, tables or dashboard integration.",
       "tags": [
         "frontend",
-        "react",
-        "ci"
+        "react"
       ],
       "inputs": [],
-      "outputs": [],
-      "dependsOn": [],
+      "outputs": [
+        "files",
+        "exports"
+      ],
+      "dependsOn": [
+        {
+          "id": "project.vite-react",
+          "relationship": "requires"
+        }
+      ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/apiClient.test.ts",
+        "command": "npm test -- apiClient"
+      },
       "compatibleNodes": [
-        "frontend.forms",
-        "frontend.tables"
+        "project.vite-react"
       ],
       "path": "frontend/react"
     },
@@ -1539,6 +2069,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/useQueryTable.test.ts",
+        "command": "npm test -- useQueryTable"
+      },
       "compatibleNodes": [
         "frontend.nextjs",
         "frontend.dashboards"
@@ -1552,7 +2087,7 @@
       "category": "project",
       "subcategory": "nextjs",
       "status": "implemented",
-      "description": "Bootstraps a TypeScript Next.js 14 (App Router) project as a separate frontend app that talks to the Express backend over HTTP with credentials: 'include' (matching authentication.jwt's httpOnly-cookie design — no token ever touches browser JS). Unlike project.node-express, there is no reference-app precedent for this: the reference application ships no frontend at all, so this node is a deliberate, from-scratch addition (see REFERENCE_ARCHITECTURE.md's \"not yet started\" note) rather than a port. Root node for every frontend/* template.",
+      "description": "Bootstraps a pinned TypeScript Next.js 16.3.5 (App Router) project as a separate frontend app that talks to the Express backend over HTTP with credentials: 'include' (matching authentication.jwt's httpOnly-cookie design — no token ever touches browser JS). Unlike project.node-express, there is no reference-app precedent for this: the reference application ships no frontend at all, so this node is a deliberate, from-scratch addition (see REFERENCE_ARCHITECTURE.md's \"not yet started\" note) rather than a port. Root node for the Next.js frontend path.",
       "tags": [
         "project",
         "nextjs",
@@ -1590,6 +2125,11 @@
           ]
         }
       ],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/HomePage.test.tsx",
+        "command": "npm test -- HomePage"
+      },
       "compatibleNodes": [
         "frontend.nextjs",
         "frontend.authentication",
@@ -1610,15 +2150,18 @@
       "tags": [
         "project",
         "node-express",
-        "express",
+        "cookie-parser",
         "cors",
+        "dotenv",
+        "express",
         "helmet",
         "morgan",
-        "cookie-parser",
-        "dotenv",
-        "typescript",
-        "ts-node",
+        "node",
+        "supertest",
         "nodemon",
+        "ts-node",
+        "typescript",
+        "vitest",
         "auth",
         "storage",
         "validation"
@@ -1663,6 +2206,11 @@
           ]
         }
       ],
+      "testing": {
+        "strategy": "integration",
+        "location": "tests/health-check.test.ts",
+        "command": "npm test -- health-check"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "storage.aws-s3",
@@ -1670,6 +2218,67 @@
         "backend.middleware"
       ],
       "path": "project/node-express"
+    },
+    {
+      "id": "project.vite-react",
+      "name": "Vite React Project Scaffold",
+      "version": "1.0.0",
+      "category": "project",
+      "subcategory": "vite-react",
+      "status": "implemented",
+      "description": "Bootstraps a pinned Vite, React and TypeScript client-rendered application as a separate frontend. It emits a minimal home view, build and test setup, validated public API origin and deterministic public generation ledger. Routing, authentication pages and server rendering are not supplied.",
+      "tags": [
+        "project",
+        "vite-react",
+        "react",
+        "react-dom",
+        "jest-dom",
+        "node",
+        "plugin-react",
+        "jsdom",
+        "typescript",
+        "vite",
+        "vitest",
+        "auth",
+        "test"
+      ],
+      "inputs": [
+        "projectName",
+        "description",
+        "port",
+        "apiBaseUrl"
+      ],
+      "outputs": [
+        "files",
+        "entrypoint"
+      ],
+      "dependsOn": [
+        {
+          "id": "project.nextjs",
+          "relationship": "conflicts"
+        }
+      ],
+      "environment": [
+        {
+          "name": "VITE_API_URL",
+          "required": false,
+          "secret": false,
+          "description": "Optional public build-time Express API origin; empty uses the reviewed code default.",
+          "usedBy": [
+            "project.vite-react",
+            "frontend.react"
+          ]
+        }
+      ],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/App.test.tsx",
+        "command": "npm test -- App"
+      },
+      "compatibleNodes": [
+        "frontend.react"
+      ],
+      "path": "project/vite-react"
     },
     {
       "id": "storage.aws-s3",
@@ -1746,6 +2355,11 @@
           ]
         }
       ],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/s3-client.test.ts",
+        "command": "npm test -- s3-client"
+      },
       "compatibleNodes": [
         "project.node-express",
         "storage.upload",
@@ -1785,6 +2399,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/delete.test.ts",
+        "command": "npm test -- delete"
+      },
       "compatibleNodes": [
         "storage.upload",
         "backend.error-handler",
@@ -1823,6 +2442,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/download.test.ts",
+        "command": "npm test -- download"
+      },
       "compatibleNodes": [
         "storage.aws-s3",
         "backend.error-handler",
@@ -1863,6 +2487,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/fileValidation.test.ts",
+        "command": "npm test -- fileValidation"
+      },
       "compatibleNodes": [
         "storage.upload",
         "backend.error-handler",
@@ -1902,6 +2531,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/presignedUrl.test.ts",
+        "command": "npm test -- presignedUrl"
+      },
       "compatibleNodes": [
         "storage.aws-s3",
         "backend.express"
@@ -1941,6 +2575,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/upload.test.ts",
+        "command": "npm test -- upload"
+      },
       "compatibleNodes": [
         "storage.aws-s3",
         "backend.error-handler",
@@ -1977,6 +2616,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "api",
+        "location": "n/a — this node configures the convention other nodes' API tests use",
+        "command": "npm test"
+      },
       "compatibleNodes": [
         "project.node-express",
         "backend.express",
@@ -2013,6 +2657,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/factories.test.ts",
+        "command": "npm test -- factories"
+      },
       "compatibleNodes": [
         "project.node-express",
         "authentication.password",
@@ -2029,11 +2678,14 @@
       "category": "testing",
       "subcategory": "integration",
       "status": "implemented",
-      "description": "Tests that hit a REAL Postgres database, as opposed to testing.unit's mocked repository layer. Provides a testDatabase helper that connects to TEST_DATABASE_URL and truncates every application table between tests, with a loud refusal to run against NODE_ENV=production or a missing TEST_DATABASE_URL fallback to the real DATABASE_URL.",
+      "description": "Tests that hit a REAL Postgres database, as opposed to testing.unit's mocked repository layer. Provides a testDatabase helper that connects to an explicit TEST_DATABASE_URL using the standard Node PostgreSQL driver. Guarded cleanup truncates only explicitly named public-schema tables in one statement without CASCADE. No application database fallback is allowed.",
       "tags": [
         "testing",
         "integration",
+        "pg",
+        "drizzle-orm",
         "postgres",
+        "ci",
         "test"
       ],
       "inputs": [],
@@ -2050,14 +2702,28 @@
       "environment": [
         {
           "name": "TEST_DATABASE_URL",
-          "required": false,
+          "required": true,
           "secret": true,
-          "description": "Connection string for a disposable test database. If unset, falls back to DATABASE_URL with a loud console warning.",
+          "description": "Explicit disposable PostgreSQL database ending in _test. Never falls back to DATABASE_URL.",
+          "usedBy": [
+            "testing.integration"
+          ]
+        },
+        {
+          "name": "GRAPH_TEST_DATABASE_ALLOW_TRUNCATE",
+          "required": false,
+          "secret": false,
+          "description": "Set to 1 only in disposable test environments to permit destructive table cleanup.",
           "usedBy": [
             "testing.integration"
           ]
         }
       ],
+      "testing": {
+        "strategy": "integration",
+        "location": "tests/testDatabase.test.ts",
+        "command": "npm test -- testDatabase"
+      },
       "compatibleNodes": [
         "database.neon-postgres.connection",
         "backend.repository",
@@ -2090,6 +2756,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "tests/mockDatabase.test.ts",
+        "command": "npm test -- mockDatabase"
+      },
       "compatibleNodes": [
         "testing.unit",
         "backend.repository",
@@ -2124,6 +2795,11 @@
         }
       ],
       "environment": [],
+      "testing": {
+        "strategy": "unit",
+        "location": "n/a — this node configures the test runner other nodes' tests use",
+        "command": "npm test"
+      },
       "compatibleNodes": [
         "project.node-express",
         "backend.repository",

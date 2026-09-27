@@ -1,0 +1,20 @@
+{
+  "packages": [
+    { "name": "react", "version": "19.3.0" },
+    { "name": "react-dom", "version": "19.3.0" },
+    { "name": "@testing-library/jest-dom", "version": "7.0.1", "dev": true },
+    { "name": "@testing-library/react", "version": "16.3.3", "dev": true },
+    { "name": "@types/node", "version": "24.0.0", "dev": true },
+    { "name": "@types/react", "version": "19.3.0", "dev": true },
+    { "name": "@types/react-dom", "version": "19.3.0", "dev": true },
+    { "name": "@vitejs/plugin-react", "version": "5.2.0", "dev": true },
+    { "name": "jsdom", "version": "30.1.1", "dev": true },
+    { "name": "typescript", "version": "5.9.3", "dev": true },
+    { "name": "vite", "version": "7.3.6", "dev": true },
+    { "name": "vitest", "version": "4.1.11", "dev": true }
+  ],
+  "services": [],
+  "templates": [
+    { "id": "project.nextjs", "relationship": "conflicts" }
+  ]
+}

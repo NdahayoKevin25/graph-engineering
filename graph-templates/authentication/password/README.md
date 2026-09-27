@@ -1,5 +1,12 @@
 # authentication.password
 
+The engine now provides an audited deterministic Password authentication renderer. Its
+credential, identity, cookie, concurrency and authorization contract is documented
+in [the executable authentication guide](../../../docs/authentication-runtime.md).
+That runtime emits reviewed source and tests; it does not execute the historical
+prompt/asset snippets below, configure secrets, deliver email, or authorize a
+deployment automatically. Existing custom code requires explicit reconciliation.
+
 **What.** The reference app's full auth feature — register, login, logout, forgot-password, reset-password, verify-email — restructured through `Authentication` repository → `authenticationService` → `authenticationController` → `authenticationRoutes` (mounted at `/api/auth`), instead of the original's service-coupled-to-`(req,res)` pattern. Also adds `GET /api/auth/me` (authenticated) — not present in the reference app, but a hard requirement for any client that can't read the httpOnly `access_token` cookie itself (see `frontend.authentication`, which is this endpoint's first real consumer) to answer "am I logged in, and as whom."
 
 **When.** After `authentication.jwt` (token issuance), `database.neon-postgres.connection` (schema/connection), `backend.error-handler`/`backend.validation`/`backend.api-response`/`backend.middleware`.

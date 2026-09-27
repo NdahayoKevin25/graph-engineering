@@ -1,21 +1,63 @@
 id: devops.deployment
-name: Deployment Orchestrator
-version: 0.1.0
+name: ECS Express Deployment Plan
+version: 1.0.0
 description: >
-  Planned. A higher-level composition node analogous to api.crud — given a
-  target (docker/serverless/vm), invokes devops.docker + devops.github-actions
-  + a target-specific node (e.g. devops.aws, also planned) in the right order
-  and reconciles their combined output into one deployment.schema.json. Not
-  yet implemented; devops.docker and devops.github-actions are usable
-  independently in the meantime.
+  Offline-only ECS Express Mode composition of the audited Docker, build/test
+  GitHub Actions and private AWS request renderers. Requires the reviewed
+  Dockerfile to be applied first; emits a public, sanitized deployment schema
+  plus the private AWS descriptor without building or deploying anything.
 category: devops
 subcategory: deployment
-status: planned
+status: implemented
 type: graph-node
-actions: []
+actions: [generate, detect, validate]
 
-inputs: []
-outputs: []
+inputs:
+  - {
+      name: target,
+      type: string,
+      required: true,
+      description: "ecs-express only",
+    }
+  - {
+      name: generatedAt,
+      type: string,
+      required: true,
+      description: "Explicit plan metadata timestamp; not deployment evidence",
+    }
+  - { name: serviceName, type: string, required: true }
+  - {
+      name: imageUri,
+      type: string,
+      required: true,
+      description: "Existing private ECR image pinned by sha256 digest",
+    }
+  - { name: port, type: number, required: true }
+  - { name: executionRoleArn, type: string, required: true }
+  - { name: infrastructureRoleArn, type: string, required: true }
+  - { name: taskRoleArn, type: string, required: true }
+  - { name: subnetIds, type: array<string>, required: true }
+  - { name: securityGroupIds, type: array<string>, required: true }
+  - {
+      name: secrets,
+      type: array<object>,
+      required: true,
+      description: "ARN-only references or an empty array",
+    }
+  - {
+      name: acknowledgeUnverifiedAwsPrerequisites,
+      type: boolean,
+      required: true,
+    }
+  - { name: mainBranch, type: string, required: false, default: dev }
+  - { name: includeMigrations, type: boolean, required: false, default: false }
+  - { name: migrationEnvironment, type: string, required: false }
+outputs:
+  - {
+      name: files,
+      type: array<string>,
+      description: "Docker, CI, private request and sanitized public plan paths",
+    }
 
 dependencies:
   packages: []
@@ -23,13 +65,17 @@ dependencies:
   templates:
     - { id: devops.docker, relationship: requires }
     - { id: devops.github-actions, relationship: requires }
-    - { id: devops.aws, relationship: extends }
+    - { id: devops.aws, relationship: requires }
 
 environment:
   variables: []
 
 files:
-  create: []
+  create:
+    - {
+        path: deployment.schema.json,
+        source: files/deployment.schema.json.template,
+      }
   modify: []
 
 compatible_with:
@@ -37,24 +83,32 @@ compatible_with:
   downstream: []
 
 consumes:
-  artifacts: [deployment.schema]
+  artifacts: [Dockerfile]
 produces:
-  artifacts: [deployment.schema]
+  artifacts: [deployment.schema, deploy/ecs-express-create-service.json]
 
 idempotency:
   strategy: detect-and-skip
-  detection: "not applicable — planned"
+  detection: "exact existing outputs are skipped; divergent app-owned files are refused"
 
 validation:
-  checks: []
+  checks:
+    - { type: file-exists, path: Dockerfile }
+    - { type: file-exists, path: deploy/ecs-express-create-service.json }
+    - { type: file-exists, path: deployment.schema.json }
 
 testing:
-  strategy: none
-  location: ""
-  command: ""
+  strategy: unit
+  location: packages/engine/tests/template-runtime-deployment.test.ts
+  command: "npm test -- tests/template-runtime-deployment.test.ts"
 
 security:
-  considerations: []
+  considerations:
+    - "The existing Dockerfile must match the reviewed devops.docker output before the private AWS request can be proposed; a newly generated overlay is not sufficient."
+    - "The public deployment.schema.json contains only a target, static file paths and a metadata timestamp; project name is redacted and envInventoryComplete is false. No caller-derived names, ECR image, account, IAM, VPC or secret ARN values are copied."
+    - "The private ECS request remains at its audited path, excluded from cloud export and blocked from Git publication, including reachable branch history."
+    - "GitHub Actions output is build/test CI only; it neither publishes an image nor deploys ECS resources."
+    - "No AWS, Docker, network, provider or metered inference call runs during rendering. IAM/network readiness, image provenance and health require external operator review."
 
 documentation:
-  required: []
+  required: [README.md]

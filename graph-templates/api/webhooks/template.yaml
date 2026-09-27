@@ -1,50 +1,78 @@
 id: api.webhooks
-name: Inbound Webhook Receiver
-version: 0.1.0
+name: Fixed-Profile Inbound HMAC Webhook
+version: 1.0.0
 description: >
-  Genuinely distinct future capability — an inbound webhook route needs
-  signature verification (e.g. HMAC against a provider secret), raw-body
-  parsing (before express.json() consumes the stream, which most webhook
-  signature schemes require), and idempotency-key deduplication, none of
-  which api.crud provides or should be stretched to provide. Planned: a
-  provider-agnostic verifyAndParseWebhook(secret, rawBody, signatureHeader)
-  helper plus a route scaffold, aligned with integrations.webhooks
-  (integrations/ category, also planned).
+  Generates one bounded generic HMAC-SHA256 inbound endpoint. The signature
+  covers a strict timestamp, delivery ID, and exact raw JSON bytes before an
+  application-owned durable atomic inbox accepts the delivery. This profile
+  does not claim compatibility with arbitrary third-party webhook schemes or
+  implement the application's event processor.
 category: api
 subcategory: webhooks
-status: planned
+status: implemented
 type: graph-node
-actions: []
+actions: [generate, detect, validate, test]
+
 inputs: []
-outputs: []
+
+outputs:
+  - { name: files, type: array<string>, description: "Route, generated test, and reviewed app/secret declarations." }
+  - { name: exports, type: array<string>, description: "webhookRoutes and verifyWebhookSignature." }
+  - { name: routes, type: array<string>, description: "POST /api/webhooks/inbound." }
+
 dependencies:
-  packages: []
+  packages:
+    - { name: express, version: "4.22.3" }
+    - { name: supertest, version: "7.2.2", dev: true }
+    - { name: vitest, version: "4.1.11", dev: true }
   services: []
   templates:
     - { id: project.node-express, relationship: requires }
+    - { id: backend.error-handler, relationship: requires }
+
 environment:
-  variables: []
+  variables:
+    - { name: WEBHOOK_HMAC_SECRET, required: true, secret: true, description: "32 CSPRNG bytes encoded as 64 lowercase hexadecimal characters; never a default or test key.", usedBy: [api.webhooks] }
+
 files:
-  create: []
-  modify: []
+  create:
+    - { path: src/routes/webhookRoutes.ts, source: files/webhookRoutes.ts }
+  modify:
+    - { path: src/utils/helpers.ts, operation: insert-required-secret, name: WEBHOOK_HMAC_SECRET }
+    - { path: src/app.ts, operation: insert-before-marker, marker: "// Import routes", template: "reviewed webhook route import" }
+    - { path: src/app.ts, operation: insert-before-logger, marker: "app.use(morgan('dev'));", template: "reviewed webhook route mount" }
+
 compatible_with:
-  upstream: []
+  upstream: [project.node-express, backend.error-handler]
   downstream: []
+
 consumes:
-  artifacts: [integration.schema]
+  artifacts: []
 produces:
-  artifacts: [integration.schema]
+  artifacts: []
+
 idempotency:
   strategy: detect-and-skip
-  detection: "n/a — planned stub, never generated"
+  detection: "Exact generated source, test, secret declaration, and pre-logger/pre-parser mount are already present; divergent files require review."
+
 validation:
-  checks: []
+  checks:
+    - { type: file-exists, path: src/routes/webhookRoutes.ts }
+    - { type: exports, path: src/routes/webhookRoutes.ts, names: [webhookRoutes, verifyWebhookSignature] }
+    - { type: build, command: "npm run build" }
+
 testing:
   strategy: unit
-  location: "n/a"
-  command: "n/a"
+  location: tests/webhookRoutes.test.ts
+  command: "npm test -- webhookRoutes"
+
 security:
   considerations:
-    - "A webhook route must verify the provider's signature before trusting the payload, and must be idempotent (replay-safe) since providers retry on timeout — both are unimplemented placeholders here, not yet a false sense of coverage."
+    - "The exact application-owned 32-byte secret is required at runtime; shape/diversity checks are not proof of entropy. Never ship the synthetic test key."
+    - "Only the fixed graph-engineering HMAC-SHA256 v1 wire profile is accepted. Its MAC covers timestamp, delivery ID, length, and raw body. Unknown provider protocols require separate reviewed adapters."
+    - "The route mounts after reviewed CORS/Helmet and before Morgan and express.json(), so handled webhook URLs never reach the access logger. Non-POST and unmatched webhook-prefix paths terminate with empty generic responses before Morgan. The route rejects unsupported or compressed content, duplicate/missing headers, invalid MACs, stale/future timestamps, malformed JSON, and bodies over 256 KiB before touching the inbox."
+    - "An existing api.search Morgan skip guard is accepted only when its parsed shape matches the exact /api/search path plus delimiter-safe /api/search/ prefix and a reviewed search route is mounted; arbitrary logger drift fails closed."
+    - "The application must supply and verify enqueueVerifiedWebhook as an atomic durable inbox. It must bind each delivery ID to the original body digest, retain the event for the replay horizon, and process accepted events idempotently. The generated route does not claim storage or exactly-once side effects."
+
 documentation:
-  required: [template.yaml]
+  required: [README.md]

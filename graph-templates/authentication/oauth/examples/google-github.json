@@ -1,0 +1,15 @@
+{
+  "inputs": { "providers": ["google", "github"], "postLoginRedirects": ["/", "/dashboard"] },
+  "expectedOutputs": {
+    "files": [
+      "src/config/oauthProviders.ts",
+      "src/services/oauthService.ts",
+      "src/routes/oauthRoutes.ts",
+      "src/config/schema.ts",
+      "src/utils/helpers.ts",
+      "src/app.ts",
+      "tests/authenticationOauth.test.ts"
+    ],
+    "routes": ["GET /api/auth/oauth/:provider/start", "POST /api/auth/oauth/:provider/link", "GET /api/auth/oauth/:provider/callback"]
+  }
+}

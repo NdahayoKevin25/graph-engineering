@@ -1,10 +1,9 @@
 {
   "packages": [
-    { "name": "@neondatabase/serverless", "version": "^0.9.4" },
-    { "name": "drizzle-orm", "version": "^0.33.0" },
-    { "name": "ws", "version": "^8.21.3" },
-    { "name": "@types/ws", "version": "^8.18.1", "dev": true },
-    { "name": "drizzle-kit", "version": "^0.24.2", "dev": true }
+    { "name": "pg", "version": "8.23.0" },
+    { "name": "drizzle-orm", "version": "0.45.3" },
+    { "name": "@types/pg", "version": "8.23.1", "dev": true },
+    { "name": "drizzle-kit", "version": "0.31.11", "dev": true }
   ],
   "services": ["postgres"],
   "templates": [{ "id": "project.node-express", "relationship": "requires" }]

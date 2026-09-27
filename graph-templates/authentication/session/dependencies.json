@@ -1,0 +1,10 @@
+{
+  "packages": [],
+  "services": ["session-store"],
+  "templates": [
+    { "id": "authentication.password", "relationship": "requires" },
+    { "id": "backend.error-handler", "relationship": "requires" },
+    { "id": "backend.middleware", "relationship": "requires" },
+    { "id": "database.neon-postgres.connection", "relationship": "requires" }
+  ]
+}

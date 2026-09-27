@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env*
+!.env.example
+# Keep this public template source visible; generated apps use .env.example.
+!/.env.example.template
+*.tsbuildinfo
+.graph/*
+!.graph/manifest.json

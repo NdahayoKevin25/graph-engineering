@@ -1,0 +1,62 @@
+import { pool } from '../config/database';
+
+export interface __ENTITY__SearchQuery {
+  q: string;
+  page: number;
+  pageSize: number;
+}
+export interface __ENTITY__SearchResult {
+  data: Array<{ id: string; rank: number }>;
+  pagination: { page: number; pageSize: number; total: number };
+}
+export class SearchQueryError extends Error {
+  constructor() { super('Invalid search query'); }
+}
+
+const SQL = String.raw`__SQL__`;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function boundedInteger(value: unknown, fallback: number, maximum: number): number {
+  if (value === undefined) return fallback;
+  const number = typeof value === 'number' ? value :
+    typeof value === 'string' && /^[1-9][0-9]{0,3}$/.test(value) ? Number(value) : NaN;
+  if (!Number.isSafeInteger(number) || number < 1 || number > maximum)
+    throw new SearchQueryError();
+  return number;
+}
+
+/** Accept only q/page/pageSize; Express arrays/nested query objects fail closed. */
+export function parse__ENTITY__SearchQuery(value: unknown): __ENTITY__SearchQuery {
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      ![Object.prototype, null].includes(Object.getPrototypeOf(value)) ||
+      Object.keys(value).some(key => !['q', 'page', 'pageSize'].includes(key)))
+    throw new SearchQueryError();
+  const raw = value as Record<string, unknown>;
+  if (typeof raw.q !== 'string' || /[\x00-\x1f\x7f]/.test(raw.q))
+    throw new SearchQueryError();
+  const q = raw.q.trim().replace(/\s+/gu, ' ');
+  if (q.length < 2 || q.length > 160 || Buffer.byteLength(q, 'utf8') > 256 || q.split(' ').length > 12)
+    throw new SearchQueryError();
+  return {
+    q,
+    page: boundedInteger(raw.page, 1, 1000),
+    pageSize: boundedInteger(raw.pageSize, 20, 50),
+  };
+}
+
+interface SearchRow { total: string; id: string | null; rank: number | null }
+/** Parameterized PostgreSQL full-text search; no caller-supplied identifier or ordering enters SQL. */
+export async function search__ENTITY__(input: unknown): Promise<__ENTITY__SearchResult> {
+  const query = parse__ENTITY__SearchQuery(input);
+  const result = await pool.query(SQL, [query.q, query.pageSize, (query.page - 1) * query.pageSize]);
+  const rows = result.rows as SearchRow[];
+  if (rows.length === 0) throw new Error('Search count was not returned');
+  const total = Number(rows[0].total);
+  if (!Number.isSafeInteger(total) || total < 0) throw new Error('Invalid search count');
+  const data = rows.flatMap(row => {
+    if (row.id === null) return [];
+    if (!UUID.test(row.id) || typeof row.rank !== 'number' || !Number.isFinite(row.rank) || row.rank < 0)
+      throw new Error('Invalid search result');
+    return [{ id: row.id, rank: row.rank }];
+  });
+  return { data, pagination: { page: query.page, pageSize: query.pageSize, total } };
+}

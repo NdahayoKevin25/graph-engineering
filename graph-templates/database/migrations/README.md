@@ -1,17 +1,38 @@
 # database.migrations
 
-**What.** Not a code generator — a process/guard node. Ensures `src/migrations/` exists with a `README.md` explaining the drizzle-kit workflow, and its `validate` action checks that `schema.ts` and the committed migrations are actually in sync (no pending drift).
+Generates src/scripts/migrate.ts, migration-directory documentation and the
+dbMigrate package script. It is executable source generation, not merely a
+README-presence check. Rendering never runs migrations or target scripts.
 
-**When.** After `database.neon-postgres.connection` (which owns the `dbGenerate`/`dbMigrate` npm scripts this node's workflow relies on — this node does not duplicate them).
+The companion connection node owns offline dbGenerate. Compile the source in
+an approved sandbox before invoking dbMigrate; it executes
+node dist/scripts/migrate.js, not an unreviewed install/build hook.
 
-**Requires.** `database.neon-postgres.connection`.
+Application DATABASE_URL is never a migration fallback. Execution requires:
 
-**Produces.** `src/migrations/.gitkeep`, `src/migrations/README.md`.
+- MIGRATION_DATABASE_URL for the reviewed target.
+- GRAPH_DATABASE_EXPECTED_NAME matching that URL's database exactly.
+- Explicit NODE_ENV=development, test or production.
+- GRAPH_DATABASE_MIGRATE=reviewed-migration.
+- Verified TLS, except explicitly enabled numeric-loopback development/test.
 
-**Connects to.** Downstream: `devops.github-actions`, which should gate `dbMigrate` behind a reviewed CI step rather than run it on every push.
+These are operator declarations, not proof of human approval or correct remote
+database classification. Production runs require separately verified access,
+protected-environment review and a backup/recovery plan.
 
-**Actions.** Only `generate` and `validate` — there's nothing to "modify" here; the actual `.sql` files are drizzle-kit's output, not this template's.
+The runner holds a session advisory lock, validates stored migration hashes and
+timestamps against the local chronological history, and delegates pending SQL
+to Drizzle's PostgreSQL transaction. Concurrent guarded operations fail closed.
+Never edit applied migration SQL or metadata; hash drift is rejected.
 
-**Validate.** `npx drizzle-kit generate` must produce no new file when run against an already-in-sync project — a new file means some `backend.repository` change wasn't followed by `dbGenerate`.
+Offline evidence includes actual generated SQL, successful apply, repeated
+no-op apply, a deliberately failing migration whose earlier CREATE TABLE rolls
+back, unchanged migration history on failure, and unchanged-schema generation
+producing no extra SQL. This proves failure rollback, NOT reversible migrations:
+there is no generated down command, automatic inverse SQL or backup restoration.
+Undoing a committed migration needs a separately reviewed forward fix or
+restore plan. Some PostgreSQL operations cannot run in a transaction and need
+their own reviewed workflow; this runner does not bypass transaction safety.
 
-**Security.** `dbMigrate` runs SQL directly against `DATABASE_URL`. Never run it unattended against a production connection string — treat it as a manual or CI-reviewed step, not something a generate/modify loop triggers on its own. Migration files are generated output; a hand-edited one breaks drift detection silently.
+Run the opt-in engine test only after provisioning its image as described in
+docs/database-runtime.md. No host database commands or cloud calls are needed.

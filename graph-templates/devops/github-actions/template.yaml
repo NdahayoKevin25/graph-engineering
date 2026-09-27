@@ -2,7 +2,7 @@ id: devops.github-actions
 name: GitHub Actions CI
 version: 1.0.0
 description: >
-  A CI workflow (build + test on every PR/push to main) plus a separately
+  A CI workflow (build + test on every PR/push to dev by default) plus an opt-in
   workflow_dispatch-gated job for applying database migrations — migrations
   are never auto-applied on a merge, only on an explicit manual trigger, so a
   bad migration can't ride along with an unrelated code change.
@@ -13,11 +13,40 @@ type: graph-node
 actions: [generate, detect, modify, validate]
 
 inputs:
-  - { name: nodeVersion, type: string, required: false, default: "20", description: "Should match devops.docker's nodeVersion if both are present" }
-  - { name: mainBranch, type: string, required: false, default: main }
+  - {
+      name: nodeVersion,
+      type: string,
+      required: false,
+      default: "24",
+      description: "The audited renderer supports Node 24",
+    }
+  - {
+      name: mainBranch,
+      type: string,
+      required: false,
+      default: dev,
+      description: "Literal trusted branch; migration dispatch must select this exact ref",
+    }
+  - {
+      name: includeMigrations,
+      type: boolean,
+      required: false,
+      default: false,
+      description: "Requires dbMigrate and an explicitly selected environment reference",
+    }
+  - {
+      name: migrationEnvironment,
+      type: string,
+      required: false,
+      description: "Protected GitHub environment reference; protection must be configured and verified separately",
+    }
 
 outputs:
-  - { name: files, type: array<string>, description: ".github/workflows/ci.yml" }
+  - {
+      name: files,
+      type: array<string>,
+      description: ".github/workflows/ci.yml",
+    }
 
 dependencies:
   packages: []
@@ -37,7 +66,14 @@ files:
   modify: []
 
 compatible_with:
-  upstream: [project.node-express, devops.docker, testing.unit, testing.api, database.migrations]
+  upstream:
+    [
+      project.node-express,
+      devops.docker,
+      testing.unit,
+      testing.api,
+      database.migrations,
+    ]
   downstream: [devops.deployment]
 
 consumes:
@@ -52,7 +88,6 @@ idempotency:
 validation:
   checks:
     - { type: file-exists, path: .github/workflows/ci.yml }
-    - { type: build, command: "npm run build" }
 
 testing:
   strategy: none
@@ -61,8 +96,9 @@ testing:
 
 security:
   considerations:
-    - "Every credential the workflow needs is read via ${{ secrets.X }} from GitHub's encrypted secret store — never a literal value in the YAML."
-    - "The database-migration job requires workflow_dispatch (a human clicking Run workflow) — it is never a step of the automatic build/test job, so a merged PR alone can never alter the production schema."
+    - "Automatic PR/push checks reference no repository/environment secrets; contents permission is read-only and checkout credentials are not persisted."
+    - "Optional database migration requires workflow_dispatch, a true explicit input, the exact trusted branch, successful checks, an existing dbMigrate script, and a named environment. The environment reference does not prove required reviews are configured."
+    - "Checkout and setup-node actions are pinned to full reviewed commit identities; installation and npm script lifecycle hooks are disabled."
     - "npm ci (not npm install) is used for reproducible, lockfile-pinned installs in CI."
 
 documentation:

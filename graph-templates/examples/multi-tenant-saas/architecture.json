@@ -1,12 +1,14 @@
 {
   "$schema": "../../artifacts/architecture.schema.json",
   "artifactType": "architecture",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "metadata": {
     "generatedBy": "ai.architect-agent",
     "generatedAt": "2026-02-03T09:00:00Z",
     "projectName": "multi-tenant-saas",
-    "sourceArtifacts": ["requirements.json"]
+    "sourceArtifacts": [
+      "requirements.json"
+    ]
   },
   "data": {
     "projectName": "multi-tenant-saas",
@@ -20,55 +22,433 @@
       "deployment": "docker"
     },
     "nodes": [
-      { "id": "project.node-express", "order": 0, "inputs": { "projectName": "multi-tenant-saas", "port": 3000, "corsOrigin": "https://app.example.com" } },
-      { "id": "backend.error-handler", "order": 1, "inputs": {} },
-      { "id": "backend.api-response", "order": 2, "inputs": {} },
-      { "id": "backend.pagination", "order": 3, "inputs": { "defaultPageSize": 25, "maxPageSize": 100 } },
-      { "id": "backend.middleware", "order": 4, "inputs": {} },
-      { "id": "backend.validation", "order": 5, "inputs": {} },
-      { "id": "database.neon-postgres.connection", "order": 6, "inputs": {} },
-      { "id": "database.migrations", "order": 7, "inputs": {} },
-      { "id": "database.transactions", "order": 8, "inputs": {} },
-      { "id": "storage.aws-s3", "order": 9, "inputs": { "defaultBucketName": "saas-media" } },
-      { "id": "storage.upload", "order": 10, "inputs": { "keyPrefix": "tenant-uploads" } },
-      { "id": "storage.file-validation", "order": 11, "inputs": { "allowedMimeTypes": ["application/pdf", "image/png", "image/jpeg"], "maxSizeBytes": 10485760 } },
-      { "id": "storage.presigned-url", "order": 12, "inputs": { "defaultExpirySeconds": 900, "maxExpirySeconds": 3600 } },
-      { "id": "authentication.jwt", "order": 13, "inputs": { "accessTokenTtl": "15m", "refreshTokenTtlDays": 14 } },
-      { "id": "authentication.password", "order": 14, "inputs": { "minPasswordLength": 12 } },
-      { "id": "authorization.rbac", "order": 15, "inputs": {} },
-      { "id": "authorization.tenant-isolation", "order": 16, "inputs": {} },
-      { "id": "backend.repository", "order": 17, "inputs": { "entityName": "Project", "tableName": "projects", "fields": [
-        { "name": "tenantId", "drizzleType": "uuid('tenant_id')", "notNull": true },
-        { "name": "name", "drizzleType": "varchar('name', { length: 200 })", "notNull": true },
-        { "name": "status", "drizzleType": "varchar('status', { length: 32 })", "notNull": true }
-      ] } },
-      { "id": "backend.service", "order": 18, "inputs": { "entityName": "Project" } },
-      { "id": "backend.controller", "order": 19, "inputs": { "entityName": "Project" } },
-      { "id": "backend.express", "order": 20, "inputs": { "entityName": "Project", "tableName": "projects", "requiresAuth": true } },
-      { "id": "api.crud", "order": 21, "inputs": {
-        "entityName": "Project", "tableName": "projects",
-        "fields": [
-          { "name": "tenantId", "drizzleType": "uuid('tenant_id')", "notNull": true },
-          { "name": "name", "drizzleType": "varchar('name', { length: 200 })", "notNull": true },
-          { "name": "status", "drizzleType": "varchar('status', { length: 32 })", "notNull": true }
-        ],
-        "filterableFields": ["status", "tenantId"], "sortableFields": ["name", "createdAt"], "requiresAuth": true
-      } },
-      { "id": "devops.docker", "order": 22, "inputs": {} },
-      { "id": "devops.github-actions", "order": 23, "inputs": {} },
-      { "id": "testing.unit", "order": 24, "inputs": {} },
-      { "id": "testing.integration", "order": 25, "inputs": {} },
-      { "id": "testing.api", "order": 26, "inputs": {} },
-      { "id": "documentation.setup", "order": 27, "inputs": {} },
-      { "id": "documentation.api", "order": 28, "inputs": {} },
-      { "id": "documentation.architecture", "order": 29, "inputs": {} }
+      {
+        "id": "project.node-express",
+        "order": 0,
+        "inputs": {
+          "projectName": "multi-tenant-saas",
+          "port": 3000,
+          "corsOrigin": "https://app.example.com"
+        },
+        "instanceId": "project.node-express"
+      },
+      {
+        "id": "backend.error-handler",
+        "order": 1,
+        "inputs": {},
+        "instanceId": "backend.error-handler"
+      },
+      {
+        "id": "backend.api-response",
+        "order": 2,
+        "inputs": {},
+        "instanceId": "backend.api-response"
+      },
+      {
+        "id": "backend.pagination",
+        "order": 3,
+        "inputs": {
+          "defaultPageSize": 25,
+          "maxPageSize": 100
+        },
+        "instanceId": "backend.pagination"
+      },
+      {
+        "id": "backend.middleware",
+        "order": 4,
+        "inputs": {},
+        "instanceId": "backend.middleware"
+      },
+      {
+        "id": "backend.validation",
+        "order": 5,
+        "inputs": {},
+        "instanceId": "backend.validation"
+      },
+      {
+        "id": "database.neon-postgres.connection",
+        "order": 6,
+        "inputs": {},
+        "instanceId": "database.neon-postgres.connection"
+      },
+      {
+        "id": "database.migrations",
+        "order": 7,
+        "inputs": {},
+        "instanceId": "database.migrations"
+      },
+      {
+        "id": "database.transactions",
+        "order": 8,
+        "inputs": {},
+        "instanceId": "database.transactions"
+      },
+      {
+        "id": "storage.aws-s3",
+        "order": 9,
+        "inputs": {
+          "defaultBucketName": "saas-media"
+        },
+        "instanceId": "storage.aws-s3"
+      },
+      {
+        "id": "storage.upload",
+        "order": 10,
+        "inputs": {
+          "keyPrefix": "tenant-uploads"
+        },
+        "instanceId": "storage.upload"
+      },
+      {
+        "id": "storage.file-validation",
+        "order": 11,
+        "inputs": {
+          "allowedMimeTypes": [
+            "application/pdf",
+            "image/png",
+            "image/jpeg"
+          ],
+          "maxSizeBytes": 10485760
+        },
+        "instanceId": "storage.file-validation"
+      },
+      {
+        "id": "storage.presigned-url",
+        "order": 12,
+        "inputs": {
+          "defaultExpirySeconds": 900,
+          "maxExpirySeconds": 3600
+        },
+        "instanceId": "storage.presigned-url"
+      },
+      {
+        "id": "authentication.jwt",
+        "order": 13,
+        "inputs": {
+          "accessTokenTtl": "15m",
+          "refreshTokenTtlDays": 14
+        },
+        "instanceId": "authentication.jwt"
+      },
+      {
+        "id": "authentication.password",
+        "order": 14,
+        "inputs": {
+          "minPasswordLength": 12
+        },
+        "instanceId": "authentication.password"
+      },
+      {
+        "id": "authorization.rbac",
+        "order": 15,
+        "inputs": {},
+        "instanceId": "authorization.rbac"
+      },
+      {
+        "id": "authorization.tenant-isolation",
+        "order": 16,
+        "inputs": {},
+        "instanceId": "authorization.tenant-isolation"
+      },
+      {
+        "id": "backend.repository",
+        "order": 17,
+        "inputs": {
+          "entityName": "Project",
+          "tableName": "projects",
+          "fields": [
+            {
+              "name": "tenantId",
+              "drizzleType": "uuid('tenant_id')",
+              "notNull": true
+            },
+            {
+              "name": "name",
+              "drizzleType": "varchar('name', { length: 200 })",
+              "notNull": true
+            },
+            {
+              "name": "status",
+              "drizzleType": "varchar('status', { length: 32 })",
+              "notNull": true
+            }
+          ]
+        },
+        "instanceId": "backend.repository:Project"
+      },
+      {
+        "id": "backend.service",
+        "order": 18,
+        "inputs": {
+          "entityName": "Project"
+        },
+        "instanceId": "backend.service:Project",
+        "bindings": {
+          "backend.repository": "backend.repository:Project"
+        }
+      },
+      {
+        "id": "backend.controller",
+        "order": 19,
+        "inputs": {
+          "entityName": "Project"
+        },
+        "instanceId": "backend.controller:Project",
+        "bindings": {
+          "backend.service": "backend.service:Project"
+        }
+      },
+      {
+        "id": "backend.express",
+        "order": 20,
+        "inputs": {
+          "entityName": "Project",
+          "tableName": "projects",
+          "requiresAuth": true
+        },
+        "instanceId": "backend.express:Project",
+        "bindings": {
+          "backend.controller": "backend.controller:Project"
+        }
+      },
+      {
+        "id": "api.crud",
+        "order": 21,
+        "inputs": {
+          "entityName": "Project",
+          "tableName": "projects",
+          "fields": [
+            {
+              "name": "tenantId",
+              "drizzleType": "uuid('tenant_id')",
+              "notNull": true
+            },
+            {
+              "name": "name",
+              "drizzleType": "varchar('name', { length: 200 })",
+              "notNull": true
+            },
+            {
+              "name": "status",
+              "drizzleType": "varchar('status', { length: 32 })",
+              "notNull": true
+            }
+          ],
+          "filterableFields": [
+            "status",
+            "tenantId"
+          ],
+          "sortableFields": [
+            "name",
+            "createdAt"
+          ],
+          "requiresAuth": true
+        },
+        "instanceId": "api.crud:Project",
+        "bindings": {
+          "backend.repository": "backend.repository:Project",
+          "backend.service": "backend.service:Project",
+          "backend.controller": "backend.controller:Project",
+          "backend.express": "backend.express:Project"
+        }
+      },
+      {
+        "id": "backend.repository",
+        "order": 22,
+        "inputs": {
+          "entityName": "Invoice",
+          "tableName": "invoices",
+          "fields": [
+            {
+              "name": "tenantId",
+              "drizzleType": "uuid('tenant_id')",
+              "notNull": true
+            },
+            {
+              "name": "projectId",
+              "drizzleType": "uuid('project_id')",
+              "notNull": true
+            },
+            {
+              "name": "amountCents",
+              "drizzleType": "integer('amount_cents')",
+              "notNull": true
+            },
+            {
+              "name": "status",
+              "drizzleType": "varchar('status', { length: 32 })",
+              "notNull": true
+            }
+          ]
+        },
+        "instanceId": "backend.repository:Invoice"
+      },
+      {
+        "id": "backend.service",
+        "order": 23,
+        "inputs": {
+          "entityName": "Invoice"
+        },
+        "instanceId": "backend.service:Invoice",
+        "bindings": {
+          "backend.repository": "backend.repository:Invoice"
+        }
+      },
+      {
+        "id": "backend.controller",
+        "order": 24,
+        "inputs": {
+          "entityName": "Invoice"
+        },
+        "instanceId": "backend.controller:Invoice",
+        "bindings": {
+          "backend.service": "backend.service:Invoice"
+        }
+      },
+      {
+        "id": "backend.express",
+        "order": 25,
+        "inputs": {
+          "entityName": "Invoice",
+          "tableName": "invoices",
+          "requiresAuth": true
+        },
+        "instanceId": "backend.express:Invoice",
+        "bindings": {
+          "backend.controller": "backend.controller:Invoice"
+        }
+      },
+      {
+        "id": "api.crud",
+        "order": 26,
+        "inputs": {
+          "entityName": "Invoice",
+          "tableName": "invoices",
+          "fields": [
+            {
+              "name": "tenantId",
+              "drizzleType": "uuid('tenant_id')",
+              "notNull": true
+            },
+            {
+              "name": "projectId",
+              "drizzleType": "uuid('project_id')",
+              "notNull": true
+            },
+            {
+              "name": "amountCents",
+              "drizzleType": "integer('amount_cents')",
+              "notNull": true
+            },
+            {
+              "name": "status",
+              "drizzleType": "varchar('status', { length: 32 })",
+              "notNull": true
+            }
+          ],
+          "filterableFields": [
+            "status",
+            "tenantId"
+          ],
+          "sortableFields": [
+            "amountCents",
+            "createdAt"
+          ],
+          "requiresAuth": true
+        },
+        "instanceId": "api.crud:Invoice",
+        "bindings": {
+          "backend.repository": "backend.repository:Invoice",
+          "backend.service": "backend.service:Invoice",
+          "backend.controller": "backend.controller:Invoice",
+          "backend.express": "backend.express:Invoice"
+        }
+      },
+      {
+        "id": "devops.docker",
+        "order": 27,
+        "inputs": {},
+        "instanceId": "devops.docker"
+      },
+      {
+        "id": "testing.unit",
+        "order": 28,
+        "inputs": {},
+        "instanceId": "testing.unit"
+      },
+      {
+        "id": "testing.integration",
+        "order": 29,
+        "inputs": {},
+        "instanceId": "testing.integration"
+      },
+      {
+        "id": "testing.api",
+        "order": 30,
+        "inputs": {},
+        "instanceId": "testing.api"
+      },
+      {
+        "id": "devops.github-actions",
+        "order": 31,
+        "inputs": {},
+        "instanceId": "devops.github-actions"
+      },
+      {
+        "id": "documentation.setup",
+        "order": 32,
+        "inputs": {},
+        "instanceId": "documentation.setup"
+      },
+      {
+        "id": "documentation.api",
+        "order": 33,
+        "inputs": {},
+        "instanceId": "documentation.api",
+        "bindings": {
+          "api.crud": "api.crud:Project"
+        }
+      },
+      {
+        "id": "documentation.architecture",
+        "order": 34,
+        "inputs": {},
+        "instanceId": "documentation.architecture"
+      }
     ],
     "edges": [
-      { "from": "api.crud", "to": "authorization.tenant-isolation" },
-      { "from": "api.crud", "to": "authorization.rbac" },
-      { "from": "authentication.password", "to": "authentication.jwt" },
-      { "from": "storage.file-validation", "to": "storage.upload" },
-      { "from": "storage.presigned-url", "to": "storage.aws-s3" }
+      {
+        "from": "api.crud:Project",
+        "to": "authorization.tenant-isolation"
+      },
+      {
+        "from": "api.crud:Invoice",
+        "to": "authorization.tenant-isolation"
+      },
+      {
+        "from": "api.crud:Project",
+        "to": "authorization.rbac"
+      },
+      {
+        "from": "api.crud:Invoice",
+        "to": "authorization.rbac"
+      },
+      {
+        "from": "authentication.password",
+        "to": "authentication.jwt"
+      },
+      {
+        "from": "storage.file-validation",
+        "to": "storage.upload"
+      },
+      {
+        "from": "storage.presigned-url",
+        "to": "storage.aws-s3"
+      },
+      {
+        "from": "documentation.api",
+        "to": "api.crud:Invoice"
+      }
     ]
   }
 }

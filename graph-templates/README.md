@@ -24,14 +24,14 @@ graph-templates/
 ├── GRAPH-NODE-SPEC.md, TEMPLATE-SPEC.md, ARTIFACT-SPEC.md   the three contracts everything else follows
 ├── template-registry.json           machine-readable index, derived — see tools/generate-registry
 ├── artifacts/                       JSON Schemas for the 10 structured handoff documents
-├── project/          node-express, nextjs (root scaffolds — backend and frontend halves are independent)
+├── project/          node-express, nextjs, vite-react (independent backend and frontend roots)
 ├── backend/           express·controller·service·repository·middleware·error-handler·validation·pagination·api-response
 ├── database/          neon-postgres·migrations·transactions·seed  (entity CRUD lives in backend/repository, see its README)
 ├── storage/            aws-s3·upload·download·presigned-url·delete·file-validation
-├── authentication/     jwt·password  (+ planned: session, oauth)
-├── authorization/      rbac·tenant-isolation  (+ planned: permissions, roles)
+├── authentication/     jwt·password·oauth·session
+├── authorization/      rbac·tenant-isolation·roles  (+ planned: permissions)
 ├── api/                 crud  (+ planned: search, webhooks — pagination/filtering/sorting live inside crud + backend/pagination)
-├── frontend/            nextjs·authentication·forms·tables (+ planned: dashboards, react) — no reference-app precedent, built from scratch to compose with the backend nodes' conventions
+├── frontend/            nextjs·react API clients; Next.js-specific authentication·forms·tables·dashboards
 ├── testing/            unit·integration·api·fixtures·mocks
 ├── devops/             docker·github-actions·environments  (+ planned: aws, deployment)
 ├── documentation/      api·architecture·setup·agent-context
@@ -49,6 +49,10 @@ Full detail in `GRAPH-NODE-SPEC.md`. Short version: every node has an `id` (dott
 ## Artifact system
 
 Ten JSON Schemas in `artifacts/` (`requirements`, `architecture`, `database.schema`, `api.schema`, `auth.schema`, `storage.schema`, `frontend.schema`, `integration.schema`, `test.schema`, `deployment.schema`) define the structured documents agents pass to each other. Every instance shares one envelope (`$schema`, `artifactType`, `version`, `metadata`, `data`) — see `ARTIFACT-SPEC.md`.
+
+## Audited renderers
+
+The Graph Engineering platform (`packages/engine` in the platform repository) renders every `implemented` node deterministically through an audited renderer, and its engine tests check each node's generated code; some template manifests and READMEs point at those tests. The manifests, files, prompts, schemas and the tools in `tools/` remain usable on their own, without the platform.
 
 ## Registry
 

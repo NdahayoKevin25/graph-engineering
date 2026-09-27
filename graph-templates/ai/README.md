@@ -13,7 +13,7 @@ A full multi-agent runtime orchestrator (`ai.orchestrator`, below) is **out of s
 | [`ai.database-agent`](database-agent/) | `requirements.schema`, `architecture.schema` | `database.schema` |
 | [`ai.backend-agent`](backend-agent/) | `database.schema`, `architecture.schema` | `api.schema` |
 | [`ai.storage-agent`](storage-agent/) | `requirements.schema` | `storage.schema` |
-| [`ai.frontend-agent`](frontend-agent/) | `architecture.schema`, `api.schema`, `auth.schema` | `frontend.schema` (+ invokes `project.nextjs`/`frontend.*`) |
+| [`ai.frontend-agent`](frontend-agent/) | `architecture.schema`, `api.schema`, `auth.schema` | `frontend.schema` (+ invokes the selected Next.js or Vite React root/client pair and supported feature nodes) |
 | [`ai.testing-agent`](testing-agent/) | `architecture.schema` | `test.schema` |
 | [`ai.validation-agent`](validation-agent/) | all artifacts + project files | `{ valid, errors, warnings, repairs }` |
 
@@ -29,7 +29,7 @@ Promoted from the narrower tier in v2.0.0 once `frontend.nextjs`/`authentication
 | [`ai.devops-agent`](devops-agent/) | Invokes `devops.*`, runs after testing |
 | [`ai.documentation-agent`](documentation-agent/) | Invokes `documentation.*` |
 | [`ai.code-review-agent`](code-review-agent/) | Convention conformance, terminal step |
-| [`ai.integration-agent`](integration-agent/) | `integrations.*` nodes are entirely `planned` — plans only |
+| [`ai.integration-agent`](integration-agent/) | No `integrations.*` nodes are registered — plans only |
 
 ## Planned
 

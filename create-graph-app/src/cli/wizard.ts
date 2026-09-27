@@ -20,7 +20,6 @@ import { printConfigSummary, confirmGeneration } from './summary';
 export async function runWizard(registry: Registry, initialName?: string): Promise<ProjectConfig> {
   clack.intro('Full-Stack Project Initializer');
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const project = await askProject(DEFAULT_CONFIG, initialName);
     const frontend = await askFrontend(registry, DEFAULT_CONFIG);

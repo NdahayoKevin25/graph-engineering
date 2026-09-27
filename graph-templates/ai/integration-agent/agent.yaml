@@ -2,9 +2,9 @@ id: ai.integration-agent
 name: Integration Agent
 version: 1.0.0
 description: >
-  Invokes integrations.* nodes (stripe, email, webhooks, third-party-api).
-  LIGHTER TREATMENT + currently has nothing implemented to invoke — the
-  integrations/ category is entirely status: planned in this registry.
+  Plans integrations.* capabilities (payments, email, webhooks,
+  third-party APIs) in integration.schema.json. Lighter treatment: the
+  registry has no integrations.* nodes, so it has nothing to invoke.
 category: ai
 subcategory: integration-agent
 status: implemented

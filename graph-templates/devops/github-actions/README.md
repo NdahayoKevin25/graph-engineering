@@ -1,17 +1,39 @@
 # devops.github-actions
 
-**What.** `.github/workflows/ci.yml` — one job (`build-and-test`) running on every PR and push to `mainBranch`: checkout, `setup-node`, `npm ci`, `npm run build`, `npm test`. A second job (`migrate-database`) exists in the same file but only runs on a manual `workflow_dispatch` trigger, never automatically.
+Deterministically proposes `.github/workflows/ci.yml`. Rendering requires actual
+build/test scripts and a matching v2/v3 package lock; missing scripts are errors,
+not successful no-ops. Rendering itself runs no commands or GitHub operations.
 
-**When.** After `project.node-express`. Extends (soft) `devops.docker`, `testing.unit`, `testing.api`, `database.migrations` — works without them (the `npm test`/`npm run dbMigrate` steps just no-op or aren't meaningful if those scripts don't exist yet), but is more useful once they're present.
+Defaults are Node 24, trusted branch `dev`, and `includeMigrations: false`.
+Branch and environment names must be bounded literal identifiers, never YAML,
+shell or GitHub-expression fragments. Unsupported versions fail closed.
+Existing custom workflows require an explicit migration plan instead of overwrite.
 
-**Requires.** `project.node-express`.
+Automatic PR/push checks use full commit-pinned checkout/setup-node actions,
+read-only contents permission, nonpersistent checkout credentials and disabled
+npm lifecycle hooks. They reference **no repository or environment secrets**.
+Project tests must provide independent local fixtures rather than requiring
+production database or authentication credentials.
 
-**Configure via.** `nodeVersion` (default `20`, should match `devops.docker`'s if both are present), `mainBranch` (default `main`).
+Optional migrations require all of:
 
-**Produces.** `.github/workflows/ci.yml`.
+- `includeMigrations: true` at generation.
+- An existing `dbMigrate` package script.
+- An explicitly named `migrationEnvironment`.
+- A manual workflow_dispatch with `run_migrations: true`.
+- An exact `expected_database_name` entered for the reviewed target.
+- The selected ref exactly matching the trusted `mainBranch`.
+- Successful build/test checks before the separate migration job.
 
-**Connects to.** Downstream: `devops.deployment` (planned — a future deploy job would live in this same workflow file, gated the same way the migration job is).
+The migration checkout uses the same immutable event SHA that passed checks.
+The migration job compiles the checked-out source before invoking the runner.
+Only its migration step references the `DATABASE_URL` GitHub secret, exposed
+as `MIGRATION_DATABASE_URL` with explicit production/acknowledgement/name guards.
+Its concurrency group does not cancel an in-progress migration.
 
-**Security.** Every secret is read via GitHub's encrypted `${{ secrets.X }}` store, never a literal in the YAML. The migration job is the one piece of this workflow that can alter production state, and it is deliberately isolated behind `workflow_dispatch` — a normal merge to `main` runs build+test only. `npm ci`, not `npm install`, for reproducible CI installs pinned to the lockfile.
-
-**Modification.** Adding a deploy step: append a new job (or extend `build-and-test`) rather than editing the migration job's gating — keep the "irreversible action requires a manual click" pattern for deploys too, following the same shape.
+An environment name in YAML does **not** configure required reviewers, restrict
+deployment branches, provision secrets, or prove approval protection exists.
+Partners must separately configure and verify those GitHub settings. No
+migration, deployment, publishing, or repository-secret change occurs during
+template generation. CI workflow rendering tests do not constitute a live
+GitHub Actions run or a human approval.

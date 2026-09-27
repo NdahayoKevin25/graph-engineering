@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "idleTimeout": { "type": "string", "default": "30m", "pattern": "^[1-9][0-9]{0,5}[smhd]$" },
+    "absoluteTimeout": { "type": "string", "default": "12h", "pattern": "^[1-9][0-9]{0,5}[smhd]$" }
+  }
+}

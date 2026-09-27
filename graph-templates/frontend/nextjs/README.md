@@ -1,6 +1,6 @@
 # frontend.nextjs
 
-**What.** `lib/apiClient.ts`: `apiFetch<T>(path, options?)` — a `fetch` wrapper that always sends `credentials: 'include'`, parses the backend's `{ message, data }`/`{ message, data, pagination }` envelopes, and throws a typed `ApiError` (with `.status`) on the backend's `{ error: { message, status } }` shape. Every other `frontend/*` template calls this instead of raw `fetch`.
+**What.** The audited `apiFetch<T>(path, options?)` uses bounded `/api/...` paths at the configured origin, included credentials, no redirects/cache, bounded JSON bodies/responses and a 15-second deadline. It returns the complete parsed envelope. Errors use safe constant messages and actual HTTP status, never raw response bodies. See [audited frontend runtime](../../../docs/frontend-runtime.md); historical catalog assets are not the executable implementation.
 
 **When.** After `project.nextjs`. Before `frontend.authentication`, `frontend.tables`, `frontend.forms`, `frontend.dashboards` — all of them import `apiFetch`.
 
@@ -10,8 +10,8 @@
 
 **Connects to.** Downstream: every other `frontend/*` node. Upstream, its response shapes are a direct mirror of `backend.api-response`/`backend.error-handler`/`backend.pagination` on the Express side — if those envelopes ever change shape, this file must change with them (there is no schema-driven codegen here yet; see `ai.api-agent`'s note about `api.schema.json` as the intended source of truth for a future stricter client).
 
-**Test.** `npm test -- apiClient` — mocks global `fetch`, asserts a 2xx response returns `data` unwrapped-ish (the full envelope, actually — callers destructure `.data` themselves) and a non-2xx response throws `ApiError` with the backend's message/status.
+**Test.** The emitted API-path test and offline fixture exercise real Response streams with mocked fetch: origin/redirect boundaries, request/response limits, safe status errors, malformed JSON and cancellation.
 
 **Validate.** File exists, exports `apiFetch`/`ApiError`, build passes.
 
-**Security.** `credentials: 'include'` is non-negotiable — this is what makes the httpOnly-cookie auth model (`authentication.jwt`) work across the frontend/backend origin split. Never add a code path that reads or stores a token client-side; a 401 is handled by redirecting to a login page (`frontend.authentication`), not by trying to refresh the token from JS (`POST /api/auth/refresh` also relies on the httpOnly cookie — the browser sends it automatically on that request too, no JS involvement needed).
+**Security.** Caller options cannot override headers, credentials or redirects. The authentication provider may perform one bounded cookie-only refresh after `/me` returns 401; it never reads a token or automatically retries arbitrary writes. Network/CORS failures are status 0, not fabricated authentication failures. Same-site deployment and backend authorization remain required.

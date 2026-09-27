@@ -1,0 +1,33 @@
+import type { NextFunction, Request, Response } from 'express';
+import { APIError } from './errorMiddleware';
+import { isIdentityId } from '../utils/tokens';
+import { hasPermission } from '../services/permissionAuthorizer';
+
+/** Reviewed permission names only; a caller cannot construct new names at runtime. */
+export const PERMISSIONS = Object.freeze(__PERMISSION_LIST__ as const);
+export type Permission = (typeof PERMISSIONS)[number];
+const allowed = new Set<string>(PERMISSIONS);
+
+/** Mount after authMiddleware. The application owns the durable grant lookup. */
+export function requirePermission(permission: Permission) {
+  if (typeof permission !== 'string' || !allowed.has(permission))
+    throw new Error('Unknown permission');
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user || !isIdentityId(req.user.id)) {
+      next(new APIError('Authentication required', 401));
+      return;
+    }
+    let granted: unknown;
+    try {
+      granted = await hasPermission(req.user.id, permission);
+    } catch {
+      next(new APIError('Permission authorization unavailable', 503));
+      return;
+    }
+    if (granted !== true) {
+      next(new APIError('Forbidden', 403));
+      return;
+    }
+    next();
+  };
+}

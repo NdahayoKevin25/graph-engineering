@@ -1,1 +1,1 @@
-1. If `src/scripts/seed.ts` already exists, switch to `modify.md`. 2. Render `files/seed.ts.template`, expanding one import + one insert block per entry in `entities`. 3. Add the `seed` npm script (`files.modify`, merge-json). 4. Run `npm run build`.
+Validate bounded JSON fixtures against literal known pgTable exports. Serialize data without evaluating it. Propose the guarded seed runner and package script; no host insert, build or install. Preserve secret screening and the separate explicitly acknowledged isolated target.

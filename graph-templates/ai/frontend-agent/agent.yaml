@@ -1,39 +1,41 @@
 id: ai.frontend-agent
 name: Frontend Agent
-version: 2.0.0
+version: 2.1.0
 description: >
   Consumes architecture.json + api.schema.json + auth.schema.json, produces
-  frontend.schema.json (pages/components per route) AND invokes the now-real
-  frontend.* code-generation nodes (project.nextjs, frontend.nextjs,
-  frontend.authentication, frontend.forms, frontend.tables) to actually build
-  the UI those pages describe. Promoted from lighter to full treatment now that
-  those nodes are implemented (frontend.dashboards/frontend.react remain
-  planned — see Scope note below).
+  frontend.schema.json (pages/components per route) and invokes the reviewed
+  frontend nodes available for the selected stack. Next.js has its API client,
+  authentication, forms, tables and dashboard components. Vite React has a
+  root scaffold and API client; route and feature integration remain
+  application-owned.
 category: ai
 subcategory: frontend-agent
 status: implemented
 type: ai-agent
 role: >
-  Plans pages/components per api.schema.json route, then sequences the concrete
-  frontend.* nodes that build them: project.nextjs (root, always first) ->
-  frontend.nextjs (API client, always second) -> frontend.authentication (if
-  auth.schema.json's strategy is not none) -> frontend.forms (if any planned
-  page is kind: form) -> frontend.tables (if any planned page is kind: table).
-  frontend.dashboards is planned — a page needing kind: dashboard is recorded
-  in frontend.schema.json but not generated; state this gap plainly rather than
-  hand-assembling one from the other nodes' output.
+  Plans pages/components per api.schema.json route, then selects one frontend
+  root/client pair. For Next.js, sequence project.nextjs -> frontend.nextjs,
+  then the exact supported authentication, forms, tables and dashboard nodes
+  requested by the page plan. For React, sequence project.vite-react ->
+  frontend.react; report a feature gap if auth, form, table or dashboard
+  components are requested because their existing graph prerequisites remain
+  Next.js-specific. Resolve page.components names against
+  data.components[].name; kind belongs to that component, never the page.
+  Neither root/client pair generates application page routes or backend policy.
 consumes:
   artifacts: [architecture.schema, api.schema, auth.schema]
 produces:
   artifacts: [frontend.schema]
-tools: [read_template_registry, read_artifact, write_artifact, resolve_dependencies]
+tools: [read_template_registry, read_artifact, write_artifact, resolve_dependencies, invoke_node]
 handoff_to: [ai.testing-agent]
 validation:
   checks:
     - "every api.schema route with auth: required has a page with requiresAuth: true"
-    - "if any page has kind: form, frontend.forms is in architecture.json's selected nodes"
-    - "if any page has kind: table, frontend.tables is in architecture.json's selected nodes"
-    - "if auth.schema.json's strategy is not none, frontend.authentication is in architecture.json's selected nodes"
-    - "no page has kind: dashboard treated as generated — frontend.dashboards is planned; such pages are recorded, not built"
+    - "every data.pages[].components name resolves uniquely to data.components[].name; page objects have no kind field"
+    - "Next.js selection includes project.nextjs and frontend.nextjs; Vite React selection includes project.vite-react and frontend.react, never a substituted root"
+    - "for Next.js, a referenced form/table kind selects frontend.forms/frontend.tables respectively"
+    - "for Next.js, enabled authentication selects frontend.authentication and its backend password prerequisite"
+    - "for Next.js, a referenced dashboard kind requires authentication, forms, tables and frontend.dashboards; its route, stats and profile-save API remain application-owned"
+    - "for Vite React, auth/form/table/dashboard needs are reported as unsupported by the current graph contracts, with no claim that those Next.js nodes were generated"
 documentation:
   required: [README.md]

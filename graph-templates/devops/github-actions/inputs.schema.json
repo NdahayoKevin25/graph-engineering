@@ -3,7 +3,18 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "nodeVersion": { "type": "string", "default": "20" },
-    "mainBranch": { "type": "string", "default": "main" }
+    "nodeVersion": { "type": "string", "const": "24", "default": "24" },
+    "mainBranch": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$",
+      "default": "dev"
+    },
+    "includeMigrations": { "type": "boolean", "default": false },
+    "migrationEnvironment": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,49}$"
+    }
   }
 }

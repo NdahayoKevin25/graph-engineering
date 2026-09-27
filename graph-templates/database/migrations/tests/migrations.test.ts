@@ -3,7 +3,9 @@ import { existsSync } from 'fs';
 import { resolve } from 'path';
 
 describe('database.migrations', () => {
-  it('src/migrations/README.md exists in a generated project', () => {
+  // This is a generated-artifact check, NOT migration/rollback runtime evidence.
+  // The engine's isolated PostgreSQL fixture executes the actual lifecycle.
+  it('migration workflow documentation exists in a generated project', () => {
     const path = resolve(__dirname, '../../../../src/migrations/README.md');
     expect(existsSync(path)).toBe(true);
   });

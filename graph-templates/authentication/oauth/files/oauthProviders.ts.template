@@ -1,0 +1,127 @@
+import { SECRETS } from '../utils/helpers';
+
+/** Rendered from the reviewed authentication.oauth inputs; change providers by re-rendering. */
+export type OAuthProviderId = 'google' | 'github' | 'oidc';
+export interface OAuthProviderConfig {
+  readonly id: OAuthProviderId;
+  /** 'oidc' verifies the signature and claims of an ID token from the token endpoint; 'github' reads the verified primary email from the REST API. */
+  readonly kind: 'oidc' | 'github';
+  readonly authorizationEndpoint: string;
+  readonly tokenEndpoint: string;
+  /** Fixed HTTPS URL of the provider's JSON Web Key Set, used to verify ID token signatures; null for GitHub (no ID token). */
+  readonly jwksUri: string | null;
+  readonly issuers: readonly string[];
+  readonly scopes: readonly string[];
+  readonly clientId: string;
+  /** Server-side only: sent in the token request body, never logged, placed in a URL, or returned to a browser. */
+  readonly clientSecret: string;
+  /**
+   * Opt-in risk: when true, a first-time login may attach to an EXISTING account with the same verified email.
+   * That trusts this provider's email verification with the whole account; the default (false) refuses instead.
+   */
+  readonly linkVerifiedEmailToExistingAccount: boolean;
+}
+interface OidcSettings {
+  issuer: string;
+  authorizationEndpoint: string;
+  tokenEndpoint: string;
+  jwksUri: string;
+}
+type ProviderPreset = Pick<OAuthProviderConfig, 'kind' | 'authorizationEndpoint' | 'tokenEndpoint' | 'jwksUri' | 'issuers' | 'scopes'>;
+
+export const OAUTH_PROVIDERS: readonly OAuthProviderId[] = Object.freeze({{json input.providers}} as OAuthProviderId[]);
+/** Exact relative paths a successful sign-in may return to; the first entry is the default. */
+export const POST_LOGIN_REDIRECTS: readonly string[] = Object.freeze({{json input.postLoginRedirects}});
+const OIDC_SETTINGS: OidcSettings | null = {{json input.oidc}};
+const LINK_EXISTING_BY_EMAIL: readonly OAuthProviderId[] = {{json input.linkVerifiedEmailToExistingAccount}};
+
+const PRESETS: Record<OAuthProviderId, () => ProviderPreset> = {
+  google: () => ({
+    kind: 'oidc',
+    authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenEndpoint: 'https://oauth2.googleapis.com/token',
+    jwksUri: 'https://www.googleapis.com/oauth2/v3/certs',
+    issuers: ['https://accounts.google.com', 'accounts.google.com'],
+    scopes: ['openid', 'email', 'profile'],
+  }),
+  github: () => ({
+    kind: 'github',
+    authorizationEndpoint: 'https://github.com/login/oauth/authorize',
+    tokenEndpoint: 'https://github.com/login/oauth/access_token',
+    jwksUri: null,
+    issuers: [],
+    scopes: ['read:user', 'user:email'],
+  }),
+  oidc: () => {
+    if (!OIDC_SETTINGS) throw new Error('Generic OIDC provider settings are missing');
+    return {
+      kind: 'oidc',
+      authorizationEndpoint: OIDC_SETTINGS.authorizationEndpoint,
+      tokenEndpoint: OIDC_SETTINGS.tokenEndpoint,
+      jwksUri: OIDC_SETTINGS.jwksUri,
+      issuers: [OIDC_SETTINGS.issuer],
+      scopes: ['openid', 'email', 'profile'],
+    };
+  },
+};
+const CREDENTIAL_VARIABLES: Record<OAuthProviderId, readonly [string, string]> = {
+  google: ['GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET'],
+  github: ['GITHUB_OAUTH_CLIENT_ID', 'GITHUB_OAUTH_CLIENT_SECRET'],
+  oidc: ['OIDC_CLIENT_ID', 'OIDC_CLIENT_SECRET'],
+};
+
+function configured(name: string): string {
+  const value = (SECRETS as unknown as Record<string, unknown>)[name];
+  if (typeof value !== 'string' || value.length === 0 || value.length > 512 || /\s/.test(value))
+    throw new Error(`Configure ${name} for OAuth sign-in`);
+  return value;
+}
+function httpsEndpoint(value: string): string {
+  const url = new URL(value);
+  if (url.protocol !== 'https:' || url.username || url.password || url.hash)
+    throw new Error('OAuth provider endpoints must be HTTPS URLs without credentials');
+  return url.toString();
+}
+function redirectBase(): string {
+  const url = new URL(configured('OAUTH_REDIRECT_BASE_URL'));
+  const localDevelopment = url.protocol === 'http:' && SECRETS.NODE_ENV !== 'production' &&
+    ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if ((url.protocol !== 'https:' && !localDevelopment) || url.username || url.password || url.pathname !== '/' || url.search || url.hash)
+    throw new Error('OAUTH_REDIRECT_BASE_URL must be the HTTPS origin registered with each provider');
+  return url.origin;
+}
+
+const redirectOrigin = redirectBase();
+/** The exact redirect URIs registered with each provider; requests never choose their own. */
+export const OAUTH_REDIRECT_URIS: Readonly<Partial<Record<OAuthProviderId, string>>> = Object.freeze(
+  Object.fromEntries(OAUTH_PROVIDERS.map((id) => [id, `${redirectOrigin}/api/auth/oauth/${id}/callback`])),
+);
+const providers = new Map<string, OAuthProviderConfig>(
+  OAUTH_PROVIDERS.map((id) => {
+    const preset = PRESETS[id]();
+    if (preset.kind === 'oidc' && !preset.jwksUri) throw new Error('OIDC providers require a jwksUri to verify ID token signatures');
+    const [clientVariable, secretVariable] = CREDENTIAL_VARIABLES[id];
+    const config: OAuthProviderConfig = Object.freeze({
+      id,
+      kind: preset.kind,
+      authorizationEndpoint: httpsEndpoint(preset.authorizationEndpoint),
+      tokenEndpoint: httpsEndpoint(preset.tokenEndpoint),
+      jwksUri: preset.jwksUri === null ? null : httpsEndpoint(preset.jwksUri),
+      issuers: Object.freeze([...preset.issuers]),
+      scopes: Object.freeze([...preset.scopes]),
+      clientId: configured(clientVariable),
+      clientSecret: configured(secretVariable),
+      linkVerifiedEmailToExistingAccount: LINK_EXISTING_BY_EMAIL.includes(id),
+    });
+    return [id, config];
+  }),
+);
+
+export function getOAuthProvider(id: unknown): OAuthProviderConfig | null {
+  return typeof id === 'string' ? providers.get(id) ?? null : null;
+}
+export function redirectUriFor(provider: OAuthProviderConfig): string {
+  const uri = OAUTH_REDIRECT_URIS[provider.id];
+  if (!uri) throw new Error('OAuth provider is not enabled');
+  return uri;
+}

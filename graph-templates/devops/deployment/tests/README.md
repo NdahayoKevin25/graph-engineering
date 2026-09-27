@@ -1,0 +1,1 @@
+The audited composer, output-schema, prerequisite, idempotence, and privacy regressions live in `packages/engine/tests/template-runtime-deployment.test.ts`. They use fake AWS identifiers and make no AWS, Docker, network, or model call.

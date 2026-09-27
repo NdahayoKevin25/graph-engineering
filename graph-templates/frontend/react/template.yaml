@@ -1,61 +1,71 @@
 id: frontend.react
-name: Plain React (Vite) Project Scaffold
-version: 0.1.0
+name: Typed API Client for Vite React
+version: 1.0.0
 description: >
-  Planned. A non-Next.js React SPA scaffold (Vite + React + TypeScript) for
-  projects that want a pure client-rendered app instead of Next.js's App
-  Router/SSR (e.g. an internal admin tool with no SEO/SSR requirement). Would
-  need its own project.* root node (project.vite-react, not yet registered)
-  since it has a different build tool and routing story than project.nextjs —
-  frontend.forms/frontend.tables's hooks are framework-agnostic React and would
-  likely be reusable as-is; frontend.nextjs's apiClient has no Next.js-specific
-  code either, so a future frontend.react node may turn out to just be
-  "frontend.nextjs's apiClient, renamed and duplicated" rather than new code —
-  worth checking before implementing to avoid needless duplication.
+  Adds the audited typed API client to a project.vite-react application. The
+  client shares frontend.nextjs's framework-independent apiFetch implementation:
+  bounded /api/ paths, included cookie credentials, safe status errors and
+  limited JSON requests and responses. This node does not add routing, login
+  pages, forms, tables or dashboard integration.
 category: frontend
 subcategory: react
-status: planned
+status: implemented
 type: graph-node
-actions: [generate]
+actions: [generate, detect, validate, test]
 
 inputs: []
-outputs: []
+
+outputs:
+  - { name: files, type: array<string>, description: "lib/apiClient.ts" }
+  - {
+      name: exports,
+      type: array<string>,
+      description: "apiFetch, ApiError, ApiSuccess, ApiPaginated",
+    }
 
 dependencies:
   packages: []
   services: []
-  templates: []
+  templates:
+    - { id: project.vite-react, relationship: requires }
 
 environment:
   variables: []
 
 files:
-  create: []
+  create:
+    - { path: lib/apiClient.ts, source: files/apiClient.ts }
   modify: []
 
 compatible_with:
-  upstream: []
-  downstream: [frontend.forms, frontend.tables]
+  upstream: [project.vite-react]
+  downstream: []
 
 consumes:
-  artifacts: []
+  artifacts: [api.schema]
 produces:
   artifacts: []
 
 idempotency:
   strategy: detect-and-skip
-  detection: "n/a — planned"
+  detection: "lib/apiClient.ts exactly matches the audited client source"
 
 validation:
-  checks: []
+  checks:
+    - { type: file-exists, path: lib/apiClient.ts }
+    - { type: exports, path: lib/apiClient.ts, names: [apiFetch, ApiError] }
+    - { type: build, command: "npm run build" }
 
 testing:
-  strategy: none
-  location: ""
-  command: ""
+  strategy: unit
+  location: tests/apiClient.test.ts
+  command: "npm test -- apiClient"
 
 security:
-  considerations: []
+  considerations:
+    - "The audited client accepts only bounded /api/ paths and a restricted request shape. It includes cookies, forbids redirects and cache, caps body and response size, and uses constant safe errors with the actual HTTP status. It never reads tokens from browser storage."
+    - "The Vite root's VITE_API_URL is public build-time configuration, not a secret. Cookie-authenticated requests require a same-site frontend and API plus exact credentialed CORS and trusted-Origin review when their origins differ."
+    - "No authentication UI, authorization policy, application routes or deployment configuration are supplied by this node."
 
 documentation:
-  required: []
+  required: [README.md]

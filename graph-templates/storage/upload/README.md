@@ -1,5 +1,13 @@
 # storage.upload
 
+## Executable runtime
+
+The audited API is `new FileUpload(authorize).uploadFileToS3(principal, file)`. A required application authorizer and canonical tenant/subject scope precede every SDK operation. Fresh UUID keys ignore client filenames, and conditional writes prevent silent overwrites where the provider supports the signed contract. The baseline already enforces 5 MiB and declared-type limits; `storage.file-validation` customizes these up to the 10 MiB ceiling. Exactly Multer `2.4.0` is required; the historical 1.x catalog range is rejected.
+
+See [audited storage runtime](../../../docs/storage-runtime.md). The historical asset description below is not the executable API or security boundary; MIME metadata is not file-content validation.
+
+## Historical catalog asset
+
 **What.** `upload` (multer, memory storage) and `FileUpload.uploadFileToS3(file)` — buffers an incoming multipart file entirely in memory then `PutObjectCommand`s it under `<keyPrefix>/<uuid>-<originalname>`, returning the object key.
 
 **When.** After `storage.aws-s3`, `backend.error-handler`. Before `storage.file-validation` (extends — adds size/MIME limits), `storage.delete` (appends a delete method to the same repository file), and whichever `backend.express` route calls `upload.single('file')` then this method.

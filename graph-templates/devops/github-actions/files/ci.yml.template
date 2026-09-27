@@ -1,42 +1,30 @@
+# Graph Engineering generated: devops.github-actions
 name: CI
 
 on:
   pull_request:
-    branches: [{{input.mainBranch}}]
+    branches: ["{{input.mainBranch}}"]
   push:
-    branches: [{{input.mainBranch}}]
-  workflow_dispatch:
+    branches: ["{{input.mainBranch}}"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "{{input.nodeVersion}}"
           cache: npm
-      - run: npm ci
-      - run: npm run build
-      - run: npm test
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm --ignore-scripts run build
+      - run: npm --ignore-scripts test
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
-
-  # Manual-only: never runs on a plain push/PR. A human must trigger this
-  # explicitly from the Actions tab so a schema change never rides along
-  # with an unrelated merge.
-  migrate-database:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "{{input.nodeVersion}}"
-          cache: npm
-      - run: npm ci
-      - run: npm run dbMigrate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: test

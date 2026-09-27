@@ -1,5 +1,7 @@
 # frontend.forms
 
+The audited runtime manages string-valued fields, synchronously blocks duplicate submissions, passes a frozen current-value snapshot and avoids updates after unmount. Unknown errors are redacted. It does not replace application/backend validation. See [audited frontend runtime](../../../docs/frontend-runtime.md); historical source assets are not the hardened implementation.
+
 **What.** `useFormState<T>(initialValues)` — a generic hook managing form field values, per-field errors, an overall `formError` (populated from a caught `ApiError`'s `.message`), and `isSubmitting`. Returns `handleChange(field)` for simple `<input>` binding and `handleSubmit(onSubmit)` for wiring a real submit handler with error/loading handling done for you.
 
 **When.** After `frontend.nextjs`. Used by any page with a form — `frontend.authentication`'s login/register pages could adopt it (they currently manage state inline for simplicity; this hook is for pages with more than 2-3 fields or repeated forms).

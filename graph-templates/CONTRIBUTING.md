@@ -22,13 +22,13 @@ Follow `TEMPLATE-SPEC.md` §2's full field list. Non-negotiable fields: `id` (mu
 
 `dependencies.json` — a flat, tooling-readable mirror of `template.yaml`'s `dependencies` block (`TEMPLATE-SPEC.md` §5). Every package needs a version range; every template dependency needs a `relationship` (`requires`/`extends`/`conflicts`).
 
-## 6. Implement `files/`
+## 6. Implement the declared files or modifications
 
-Real, compilable code — never pseudocode or `// TODO: implement this`. If the file is entity/input-driven, name it `*.template` and use `{{input.*}}`/`{{#each}}`/`{{#if}}` placeholders (`TEMPLATE-SPEC.md` §3, §6). Match the conventions already established by the templates in the same category — read a sibling template's `files/` before writing your own; consistency across the library matters more than any individual template's local elegance. If your node modifies an existing file rather than creating a new one, add the entry to `files.modify` in `template.yaml` with an explicit `operation` (§2 field notes) — never silently overwrite a file another node owns.
+Real, compilable code — never pseudocode or `// TODO: implement this`. If `files.create` declares new output, provide a non-empty `files/` directory. If the file is entity/input-driven, name it `*.template` and use `{{input.*}}`/`{{#each}}`/`{{#if}}` placeholders (`TEMPLATE-SPEC.md` §3, §6). Match the conventions already established by the templates in the same category — read a sibling template's `files/` before writing your own; consistency across the library matters more than any individual template's local elegance. If your node only modifies an existing file, add the entry to `files.modify` in `template.yaml` with an explicit `operation` (§2 field notes) and implement an audited modifier; it need not invent a `files/` payload. Never silently overwrite a file another node owns.
 
 ## 7. Add tests
 
-`tests/` — prove the generated code actually does what the node claims. Unit-test business logic against a mocked dependency (see `backend/service/tests/EntityService.test.ts` for the pattern); use `testing.api`'s supertest convention for anything that mounts a route. A template with no way to verify its own output is not done.
+Prove the generated code or modification actually does what the node claims. Prefer node-local `tests/` for emitted business logic; central generated-code/runtime tests are appropriate for shared renderers and modify-only nodes. Unit-test business logic against a mocked dependency (see `backend/service/tests/EntityService.test.ts` for the pattern); use `testing.api`'s supertest convention for anything that mounts a route. A template with no way to verify its own output is not done.
 
 ## 8. Add validation
 

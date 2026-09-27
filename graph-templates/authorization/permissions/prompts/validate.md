@@ -1,0 +1,1 @@
+Verify that every protected route explicitly mounts `authMiddleware` before `requirePermission`, the authorizer reads trusted current grants, an unlisted permission fails during route registration, and a failed lookup never grants access. Run the generated test and strict TypeScript build; deploy any grant schema/migration separately with human review.

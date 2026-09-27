@@ -1,0 +1,1 @@
+The deterministic engine renderer creates the reviewed dashboard component and its test. This catalog note is not executable. Supply an application-owned page, approved table path, statistics and profile-save callback separately; do not invent endpoints.

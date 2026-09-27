@@ -1,5 +1,13 @@
 # storage.presigned-url
 
+## Executable runtime
+
+Use `new PresignedUrl(authorize)`. `getUploadUrl(principal, contentType, size, expiry?)` creates a fresh scoped key and returns `{url,key,headers,expiresIn}`; the exact size, type and conditional-write headers are signed and must be transmitted. `getDownloadUrl(principal, key, expiry?)` scopes and authorizes before signing. Both require finite bounded expiry; uploads share `storage.upload`'s configured limits. This hardened node therefore requires the upload configuration in addition to `storage.aws-s3`.
+
+The real offline SDK signer is tested, but provider-side enforcement and browser compatibility are not live-verified. URLs are bearer credentials; a default SDK empty-body checksum is deliberately avoided when signing unknown future bytes. See [audited storage runtime](../../../docs/storage-runtime.md). The historical asset below is not the supported API.
+
+## Historical catalog asset
+
 **What.** `PresignedUrl.getUploadUrl(key, contentType, expiresIn?)` and `PresignedUrl.getDownloadUrl(key, expiresIn?)` — time-limited signed URLs (default 3600s, hard-capped at `maxExpirySeconds`). `getDownloadUrl` ports the reference app's existing `FileUpload.getSignedUrl` verbatim; `getUploadUrl` is new, giving clients a way to upload directly to storage without routing the file bytes through the API server.
 
 **Scope note.** The original project brief asked for "presigned upload" and "presigned download" as separate templates — they're deliberately consolidated here into one node, since both are the identical `getSignedUrl(command, { expiresIn })` call differing only in which S3 command they sign.

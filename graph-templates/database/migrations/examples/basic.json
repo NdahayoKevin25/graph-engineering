@@ -1,1 +1,1 @@
-{ "inputs": {}, "expectedOutputs": { "files": ["src/migrations/.gitkeep", "src/migrations/README.md"] } }
+{ "inputs": {}, "expectedOutputs": { "files": ["package.json", "src/migrations/.gitkeep", "src/migrations/README.md", "src/scripts/migrate.ts"] } }

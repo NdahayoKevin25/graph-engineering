@@ -1,7 +1,16 @@
+# Graph Engineering generated: devops.docker
 services:
   app:
     build: .
     env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "{{input.port}}"
     ports:
-      - "{{input.port}}:{{input.port}}"
+      - "127.0.0.1:{{input.port}}:{{input.port}}"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     restart: unless-stopped
